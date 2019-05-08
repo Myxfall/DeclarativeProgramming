@@ -1,4 +1,4 @@
-%['/Users/max/Dropbox/Unif/Master/DeclarativeProgramming/SecondYear/Project/project.pl'].
+%['/Users/max/Dropbox/Unif/Master/DeclarativeProgramming/SecondYear/Project/DeclarativeProgramming/project.pl'].
 
 :- use_module(library(clpfd)).
 
@@ -14,20 +14,27 @@ teacher --> ["he", "also"].
 teacher --> ["she", "also"].
 
 % Class
-class --> ["class"].
-class --> ["classes"].
+classWord --> ["class"].
+classWord --> ["classes"].
 classNumber(Number) --> [Number], {string(Number)}.
-class --> class, classNumber(Number).
-%TODO: add several class
+class --> classWord, classNumber(Number), classNumber(NumberTwo), conjonction, classNumber(NumberThird).
+class --> classWord, classNumber(Number), conjonction, classNumber(NumberBis).
+class --> classWord, classNumber(Number).
+%TODO: add several classes in a better way
 
 % Room
-room --> ["room"].
-roomNumber(Number) --> [Number], {string(Number)}. %TODO: change string
-room --> room, roomNumber(Number).
+roomWord --> ["room"].
+roomNumber(Number) --> [Number], {integer(Number)}.
+room --> roomWord, roomNumber(Number).
 
-teacherDescription --> ["teaches", "class"].
-teacherDescription --> ["teaches", "classes"].
-classDescription --> ["is", "in", "room"].
+% Students
+studentsWord --> ["students"].
+numberStudents(Number) --> [Number], {integer(Number)}.
+students --> numberStudents(Number), studentsWord.
+
+% Subjects actions
+teacherDescription --> ["teaches"].
+classDescription --> ["is", "in"].
 classDescription --> ["are", "in", "the", "same", "room"].
 classDescription --> ["have", "the", "same", "teacher"].
 classDescription --> ["has"].
@@ -35,7 +42,15 @@ classDescription --> ["is", "before"].
 classDescription --> ["is", "after"].
 classDescription --> ["are", "on", "the", "same", "day"].
 roomDescription --> ["seats"].
-descriptionConnexion --> ["and"].
+conjonction --> ["and"].
+conjonction --> [].
+
+% Sentence description
+teacherSentence --> teacher, teacherDescription, class.
+classSentence --> class, classDescription, room.
+classSentence --> class, classDescription.
+classSentence --> class, classDescription, class.
+roomSentence --> room, roomDescription, students.
 
 
 % --
@@ -46,7 +61,17 @@ descriptionConnexion --> ["and"].
 test(prof) :-
 	phrase(teacher, ["prof", "smith"]),
 	phrase(teacher, ["he", "also"]).
-test(room) :-
-	phrase(room, ["room", "smith"]).
 
+test(teaching) :-
+	phrase(teacherSentence, ["prof", "rob", "teaches", "class", "c1"]),
+	phrase(teacherSentence, ["he", "also", "teaches", "class", "c2"]).
+
+test(class) :-
+	phrase(classSentence, ["class", "c1", "is", "in", "room", 102]),
+	phrase(classSentence, ["class", "c1", "is", "before", "class", "c2"]),
+	phrase(classSentence, ["classes", "c1", "and", "c2", "are", "in", "the", "same", "room"]),
+	phrase(classSentence, ["classes", "c1", "c2", "and", "c3", "have", "the", "same", "teacher"]).
+
+test(room) :-
+	phrase(roomSentence, ["room", 102, "seats", 100, "students"]).
 
