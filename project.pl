@@ -6,6 +6,9 @@
 % X) 	: generate goal --> teacher(jones, [a1,b2,c3])
 % 1.1) 	: find way to find fitting goal -> teacher(...) class(...)
 % 2) 	: find way to check "he also" after prof X 
+% 2.1) 	: to do that, updateTeacher(...) that find teacher and adds the courses after finding "he also"
+% 2.2)	: just pop() stack and get the goal teacher(...), if not teacher throw error
+% 3) 	: pour creer containtes : listes de class/room/teacher and put inside the elements
 % -----
 
 
@@ -15,16 +18,12 @@
 
 %% ------ DRAFT IDEAS -----
 % teach : teacher(prof, [courses])
-
 % class : classIn([classes], room)
 % class : teacherBy([classes], prof)
 % class : populate(class, nbr_students)
-
 % class : before(class1, class2)
 % class : after(class1, class2)
-
 % class : sameDay([classes])
-
 % room 	: seats(room, nbr_students)
 
 % --
@@ -47,7 +46,7 @@ classNumber(Number) --> [Number].
 class([ClassOne, ClassTwo, ClassThree]) --> classWord, classNumber(ClassOne), classNumber(ClassTwo), conjonction, classNumber(ClassThree).
 class([ClassOne, ClassTwo]) --> classWord, classNumber(ClassOne), conjonction, classNumber(ClassTwo).
 class([Number]) --> classWord, classNumber(Number).
-%TODO: add several classes in a better way
+% TODO: add several classes in a better way
 
 % Room
 roomWord --> [room].
@@ -60,6 +59,7 @@ numberStudents(Number) --> [Number], {integer(Number)}.
 students(Number) --> numberStudents(Number), studentsWord.
 
 % Subjects actions
+% TODO: remove this section
 teacherDescription --> [teaches].
 classDescription --> [is, in].
 classDescription --> [are, in, the, same, room].
