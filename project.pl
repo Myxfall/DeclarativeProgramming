@@ -9,6 +9,7 @@
 % 2.1) 	: to do that, updateTeacher(...) that find teacher and adds the courses after finding "he also"
 % 2.2)	: just pop() stack and get the goal teacher(...), if not teacher throw error
 % 3) 	: pour creer containtes : listes de class/room/teacher and put inside the elements
+% 4) 	: he/she should accept more than just one new class
 % -----
 
 
@@ -35,8 +36,8 @@ prof --> [prof].
 %teacherName(Name) --> [Name], {string(Name)}.
 teacherName(Name) --> [Name].
 teacher(Name) --> prof, teacherName(Name).
-teacher(Name) --> [he, also], {Name = he}.
-teacher(Name) --> [she, also], {Name = she}.
+teacherSuppl --> [he, also].
+teacherSuppl --> [she, also].
 
 % Class
 classWord --> [class].
@@ -75,6 +76,7 @@ conjonction --> [and].
 % Sentence description
 %teacherSentence(StackIn, StackOut) --> teacher(Name), teacherDescription, class(ClassList), { addTeacherToStack(StackIn, Name, ClassList, StackOut) }.
 teacherSentence(StackIn, StackOut) --> teacher(Name), teacherDescription, class(ClassList), { addToStack(StackIn, teacher(Name, ClassList), StackOut) }.
+teacherSentence(StackIn, StackOut) --> teacherSuppl, teacherDescription, class([Class]), { updateStack(StackIn, Class, StackOut) }.
 
 %% Class sentence really general
 %classSentence(StackIn, StackOut) --> class(ClassList), classDescription, room(RoomNumber).
@@ -90,7 +92,7 @@ classSentence(StackIn, StackOut) --> class(ClassList), [is, before], class(Class
 classSentence(StackIn, StackOut) --> class(ClassList), [is, after], class(ClassList2), {addToStack(StackIn, classAfter(ClassList, ClassList2), StackOut) }.
 classSentence(StackIn, StackOut) --> class(ClassList), [has], students(StudentsNumber), {addToStack(StackIn, classStudents(ClassList, StudentsNumber), StackOut) }.
 
-roomSentence(StackIn, StackOut) --> room(RoomNumber), roomDescription, students(StudentsNumber), { addToStack(StackIn, seats(RoomName, Seats), StackOut) }.
+roomSentence(StackIn, StackOut) --> room(RoomNumber), roomDescription, students(StudentsNumber), { addToStack(StackIn, seats(RoomName, StudentsNumber), StackOut) }.
 
 % Full Sentence
 %testSentence(StackIn, StackOut) --> 
@@ -111,6 +113,25 @@ emptyStack(X) :- X = [].
 % @param StackOut Updated Stack
 addToStack(Stack, Representation, StackOut) :-
 	StackOut = [Representation|Stack].
+
+%% updateStack(...)
+%
+% updateStack/3 add a single new class to the prof representation when "he-she also" is found
+% throws error 	when previous sentence is not teacher
+% 				when class is already in stack of teacher representation
+%
+updateStack([Teacher|Stack], ClassList, StackOut) :- 
+	\+ Teacher = teacher(_,_),
+	throw("Error : Previous sentence should be teacher when he/she is used !").
+updateStack([teacher(TeacherName, ClassList)|Stack], NewClass, StackOut) :- 
+	Teacher = teacher(_,_),
+	member(NewClass, ClassList),
+	throw("Error : he/she teacher new class is already in stack !").
+updateStack([teacher(TeacherName, ClassList)|Stack], NewClass, [teacher(TeacherName, NewClassList)|Stack]) :- 
+	Teacher = teacher(_,_),
+	\+ member(NewClass, ClassList),
+	append(ClassList, [NewClass], NewClassList).
+
 
 %% addTeacherToStack(Stack, Subject, Var Stackout)
 %
@@ -140,11 +161,10 @@ addRoomToStack(Stack, RoomName, Seats, [(seats(RoomName, Seats))|Stack]).
 
 test(prof) :-
 	phrase(teacher(smith), [prof, smith]),
-	phrase(teacher(_), [he, also]).
+	phrase(teacherSuppl, [he, also]).
 
 test(teaching) :-
-	phrase(teacherSentence(_,_), [prof, rob, teaches, class, c1]),
-	phrase(teacherSentence(_,_), [he, also, teaches, class, c2]).
+	phrase(teacherSentence(_,_), [prof, rob, teaches, class, c1]).
 
 test(class) :-
 	phrase(classSentence(_,_), [class, c1, is, in, room, 102]),
@@ -158,7 +178,8 @@ test(room) :-
 test(stackTeacher) :- 
 	emptyStack(Stack),
 	phrase(teacherSentence(Stack,[teacher(rob, [c1])]), [prof, rob, teaches, class, c1]),	
-	phrase(teacherSentence(Stack,[teacher(steve, [c1,c2])]), [prof, steve, teaches, classes, c1, and, c2]).	
+	phrase(teacherSentence(Stack,[teacher(steve, [c1,c2])]), [prof, steve, teaches, classes, c1, and, c2]),
+	phrase(teacherSentence([teacher(steve, [c1,c2])] ,[teacher(steve, [c1,c2,c3])]), [he, also, teaches, class, c3]).
 
 test(stackRoom) :-
 	emptyStack(Stack),
