@@ -4,20 +4,40 @@
 
 %% ------ TODO LIST -----
 % X) 	: generate goal --> teacher(jones, [a1,b2,c3])
-% 1.1) 	: find way to find fitting goal -> teacher(...) class(...)
-% 2) 	: find way to check "he also" after prof X 
-% 2.1) 	: to do that, updateTeacher(...) that find teacher and adds the courses after finding "he also"
-% 2.2)	: just pop() stack and get the goal teacher(...), if not teacher throw error
+% X) 	: find way to find fitting goal -> teacher(...) class(...)
+% X) 	: find way to check "he also" after prof X 
+% X) 	: to do that, updateTeacher(...) that find teacher and adds the courses after finding "he also"
+% X)	: just pop() stack and get the goal teacher(...), if not teacher throw error
 % 3) 	: pour creer containtes : listes de class/room/teacher and put inside the elements
 % 4) 	: he/she should accept more than just one new class
+% 5)	: parser that works with sentences plain text
+% 6)	: goals should have input/output for system constaintes, find what kind
+% 7) 	: create a new stack that contains the variables name ?
+% 8) 	: 
 % -----
 
 
 %% ------ QUESTIONS LIST ------
 % 1) Split class sentence in order to push to stack the right goal ?
-% -> 
+% -> yes
+% 2) there is no information about class duration, how are we suppose to give 2 hours of prepration time to teacher then ?
+% ->
+% 3) Teacher should teach each class every week, I suppose we re talking about HIS classes and not all.
 
 %% ------ DRAFT IDEAS -----
+
+% maybe possible de créer directe des contraintes comme before(c1, c2) -> c1 #< c2
+% ou le faire après au cas par cas
+% return of everything is a triple list with teacher class room that it is possible to print
+
+% -- Contraintes --
+% list of teacher associated with number and class - 1 list of constaintes
+% list of room associated with seats - 2 list of constraintes
+% list of classes
+% then go throught the list and creates constaintes, as the box example
+
+% ?les contraintes doivent être construites au fur et à mesure. A la fin on récupère une liste quil suffit de print
+
 % teach : teacher(prof, [courses])
 % class : classIn([classes], room)
 % class : teacherBy([classes], prof)
@@ -26,6 +46,9 @@
 % class : after(class1, class2)
 % class : sameDay([classes])
 % room 	: seats(room, nbr_students)
+
+
+
 
 % --
 % -- MAIN PROGRAM
@@ -72,7 +95,6 @@ classDescription --> [are, on, the, same, day].
 roomDescription --> [seats].
 conjonction --> [and].
 
-
 % Sentence description
 %teacherSentence(StackIn, StackOut) --> teacher(Name), teacherDescription, class(ClassList), { addTeacherToStack(StackIn, Name, ClassList, StackOut) }.
 teacherSentence(StackIn, StackOut) --> teacher(Name), teacherDescription, class(ClassList), { addToStack(StackIn, teacher(Name, ClassList), StackOut) }.
@@ -93,9 +115,6 @@ classSentence(StackIn, StackOut) --> class(ClassList), [is, after], class(ClassL
 classSentence(StackIn, StackOut) --> class(ClassList), [has], students(StudentsNumber), {addToStack(StackIn, classStudents(ClassList, StudentsNumber), StackOut) }.
 
 roomSentence(StackIn, StackOut) --> room(RoomNumber), roomDescription, students(StudentsNumber), { addToStack(StackIn, seats(RoomName, StudentsNumber), StackOut) }.
-
-% Full Sentence
-%testSentence(StackIn, StackOut) --> 
 
 %% emptyStack(X)
 %
@@ -133,25 +152,26 @@ updateStack([teacher(TeacherName, ClassList)|Stack], NewClass, [teacher(TeacherN
 	append(ClassList, [NewClass], NewClassList).
 
 
-%% addTeacherToStack(Stack, Subject, Var Stackout)
-%
-% addTeacherToStack/4 Add teacher goal to the stack
-%
-% @param Stack Current Stack
-% @parem Subject Subject of the parsed sentence
-% @param Var COD of the sentence
-% @param StackOut Updated Stack
-%
-addTeacherToStack(Stack, Subject, Var, StackOut) :-
-	StackOut = [(teacher(Subject, Var))|Stack].
+% ----- CONSTANT VALUES -----
+% 10 teacher --> list lenght(ListTeacher, 10)
 
-%% addRoomToStack
-%
-% addRoomToStack Add room goal seating student to the Stack
-%
-addRoomToStack(Stack, RoomName, Seats, [(seats(RoomName, Seats))|Stack]).
+room(1, 35).
+room(2, 60).
+room(3, 100).
 
+class(1, 30).
+class(2, 35).
+class(3, 40).
+class(4, 50).
+class(5, 10).
 
+%timetable(Data) :-
+%	length(TeacherList, 10),
+%
+%	teacher(...),
+%	class(...),
+%	room(...)
+%
 
 
 % --
