@@ -13,9 +13,19 @@
 % 5)	: parser that works with sentences plain text
 % 6)	: goals should have input/output for system constaintes, find what kind
 % 7) 	: create a new stack that contains the variables name ?
-% 8) 	: 
+% 8) 	: when pushed, you check in STACK if already exists
+% 9)	: create a list variables name
 % -----
 
+% { class(NAME, DAY, HOUR, TEACHER, SEATS) Class(NAM2)}
+% predicate :- class C1 is before class c2
+% 	class(NAME, DAY, HOUR, TEACHER, SEATS)
+% 	CLASS #< CLASS2
+% 	CLass(NAME, SEATS)
+
+% 	push CLASS, CLASS2 
+
+% 	PUSH 
 
 %% ------ QUESTIONS LIST ------
 % 1) Split class sentence in order to push to stack the right goal ?
@@ -23,6 +33,10 @@
 % 2) there is no information about class duration, how are we suppose to give 2 hours of prepration time to teacher then ?
 % ->
 % 3) Teacher should teach each class every week, I suppose we re talking about HIS classes and not all.
+% ->
+% 4) est ce que je peux créer les contraintes au fur et a mesure et non pas a lafin. du genre quand je push isbefore() je crée mes contraintes la et je push dans le stack le full clas(*,*,...) directement
+% ->
+% 5) vu quon a 3 info (teach, class, room), est ce que je devrais crée un stack de 3 sous liste afin de pouvoir les parcouris a la fin, comme exemple du cours
 
 %% ------ DRAFT IDEAS -----
 
