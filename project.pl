@@ -36,7 +36,7 @@
 % ->
 % 4) est ce que je peux créer les contraintes au fur et a mesure et non pas a lafin. du genre quand je push isbefore() je crée mes contraintes la et je push dans le stack le full clas(*,*,...) directement
 % ->
-% 5) vu quon a 3 info (teach, class, room), est ce que je devrais crée un stack de 3 sous liste afin de pouvoir les parcouris a la fin, comme exemple du cours
+% 5) comment attribuer un numéro à class/teacher qui fit ceux qui existe mais sans essayer dautre numéro
 
 %% ------ DRAFT IDEAS -----
 
@@ -111,7 +111,9 @@ conjonction --> [and].
 
 % Sentence description
 %teacherSentence(StackIn, StackOut) --> teacher(Name), teacherDescription, class(ClassList), { addTeacherToStack(StackIn, Name, ClassList, StackOut) }.
-teacherSentence(StackIn, StackOut) --> teacher(Name), teacherDescription, class(ClassList), { addToStack(StackIn, teacher(Name, ClassList), StackOut) }.
+%teacherSentence(StackIn, StackOut) --> teacher(Name), teacherDescription, class(ClassList), { addToStack(StackIn, teacher(Name, ClassList), StackOut) }.
+teacherSentence(StackIn, StackOut) --> teacher(Name), teacherDescription, class(ClassList), { addTeacherToStack(StackIn, teacher(Name, ClassList), StackOut) }.
+
 teacherSentence(StackIn, StackOut) --> teacherSuppl, teacherDescription, class([Class]), { updateStack(StackIn, Class, StackOut) }.
 
 %% Class sentence really general
@@ -128,7 +130,8 @@ classSentence(StackIn, StackOut) --> class(ClassList), [is, before], class(Class
 classSentence(StackIn, StackOut) --> class(ClassList), [is, after], class(ClassList2), {addToStack(StackIn, classAfter(ClassList, ClassList2), StackOut) }.
 classSentence(StackIn, StackOut) --> class(ClassList), [has], students(StudentsNumber), {addToStack(StackIn, classStudents(ClassList, StudentsNumber), StackOut) }.
 
-roomSentence(StackIn, StackOut) --> room(RoomNumber), roomDescription, students(StudentsNumber), { addToStack(StackIn, seats(RoomName, StudentsNumber), StackOut) }.
+%roomSentence(StackIn, StackOut) --> room(RoomNumber), roomDescription, students(StudentsNumber), { addToStack(StackIn, seats(RoomName, StudentsNumber), StackOut) }.
+roomSentence(StackIn, StackOut) --> room(RoomName), roomDescription, students(StudentsNumber), { addRoomToStack(StackIn, seats(RoomName, StudentsNumber), StackOut) }.
 
 %% emptyStack(X)
 %
@@ -147,6 +150,36 @@ emptyStack(X) :- X = [].
 addToStack(Stack, Representation, StackOut) :-
 	StackOut = [Representation|Stack].
 
+%% addTeacherToStack(Stack, Representation, StackOut)
+%
+%
+%
+addTeacherToStack(Stack, teacher(TeacherName, ClassList), StackOut) :-
+	teacher(TeacherNumber),
+	StackOut = [teacher(TeacherName, TeacherNumber, ClassList)|Stack].
+
+%% addClassToStack(Stack, Representation, StackOut)
+%
+% addClassToStack/3
+%
+% @class representation : class(ClassName, ClassNumber, Teachby, Room, Day, Hour)
+%
+%addClassToStack(Stack, classRoom([ClassName], RoomNumber), StackOut) :-
+%	\+ member(class(ClassName, ClassNumber, Teachby, Room, Day, Hour), Stack),
+%TODO: use select & member to get and remove from list of objects
+%Donc lidee cest de recup le goal envoyé par le parser et dajouter lobject class en fonction + les contraintes
+% en verifiant si la class existe déjà dans la liste ou pas.
+	
+
+%% addRoomToStack(Stack, Representation, StackOut)
+%
+%
+%
+addRoomToStack(Stack, seats(RoomName, StudentsNumber), StackOut) :-
+	room(RoomNumber, StudentsNumber),
+	StackOut = [room(RoomName, RoomNumber, StudentsNumber)|Stack].
+
+
 %% updateStack(...)
 %
 % updateStack/3 add a single new class to the prof representation when "he-she also" is found
@@ -154,20 +187,31 @@ addToStack(Stack, Representation, StackOut) :-
 % 				when class is already in stack of teacher representation
 %
 updateStack([Teacher|Stack], ClassList, StackOut) :- 
-	\+ Teacher = teacher(_,_),
+	\+ Teacher = teacher(_,_,_),
 	throw("Error : Previous sentence should be teacher when he/she is used !").
-updateStack([teacher(TeacherName, ClassList)|Stack], NewClass, StackOut) :- 
-	Teacher = teacher(_,_),
+updateStack([teacher(TeacherName, _, ClassList)|Stack], NewClass, StackOut) :- 
+	Teacher = teacher(_,_,_),
 	member(NewClass, ClassList),
 	throw("Error : he/she teacher new class is already in stack !").
-updateStack([teacher(TeacherName, ClassList)|Stack], NewClass, [teacher(TeacherName, NewClassList)|Stack]) :- 
-	Teacher = teacher(_,_),
+updateStack([teacher(TeacherName, TeacherNumber, ClassList)|Stack], NewClass, [teacher(TeacherName, TeacherNumber, NewClassList)|Stack]) :- 
+	Teacher = teacher(_,_,_),
 	\+ member(NewClass, ClassList),
 	append(ClassList, [NewClass], NewClassList).
 
 
 % ----- CONSTANT VALUES -----
 % 10 teacher --> list lenght(ListTeacher, 10)
+
+teacher(1).
+teacher(2).
+teacher(3).
+teacher(4).
+teacher(5).
+teacher(6).
+teacher(7).
+teacher(8).
+teacher(9).
+teacher(10).
 
 room(1, 35).
 room(2, 60).
@@ -211,13 +255,14 @@ test(room) :-
 
 test(stackTeacher) :- 
 	emptyStack(Stack),
-	phrase(teacherSentence(Stack,[teacher(rob, [c1])]), [prof, rob, teaches, class, c1]),	
-	phrase(teacherSentence(Stack,[teacher(steve, [c1,c2])]), [prof, steve, teaches, classes, c1, and, c2]),
-	phrase(teacherSentence([teacher(steve, [c1,c2])] ,[teacher(steve, [c1,c2,c3])]), [he, also, teaches, class, c3]).
+	phrase(teacherSentence(Stack,[teacher(rob, _, [c1])]), [prof, rob, teaches, class, c1]),	
+	phrase(teacherSentence(Stack,[teacher(steve, _, [c1,c2])]), [prof, steve, teaches, classes, c1, and, c2]),
+	phrase(teacherSentence([teacher(steve, _, [c1,c2])], [teacher(steve, _, [c1,c2,c3])]), [he, also, teaches, class, c3]).
 
 test(stackRoom) :-
 	emptyStack(Stack),
-	phrase(roomSentence(Stack, [seats(102, 100)]), [room, 102, seats, 100, students]).
+	%phrase(roomSentence(Stack, [seats(102, 100)]), [room, 102, seats, 100, students]).
+	phrase(roomSentence(Stack, [room(102, 3, 100)]), [room, 102, seats, 100, students]).
 
 test(stackClass) :-
 	emptyStack(Stack),
