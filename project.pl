@@ -8,13 +8,13 @@
 % X) 	: find way to check "he also" after prof X 
 % X) 	: to do that, updateTeacher(...) that find teacher and adds the courses after finding "he also"
 % X)	: just pop() stack and get the goal teacher(...), if not teacher throw error
+
 % 3) 	: pour creer containtes : listes de class/room/teacher and put inside the elements
 % 4) 	: he/she should accept more than just one new class
 % 5)	: parser that works with sentences plain text
 % 6)	: goals should have input/output for system constaintes, find what kind
 % 7) 	: create a new stack that contains the variables name ?
 % 8) 	: when pushed, you check in STACK if already exists
-% 9)	: create a list variables name
 % -----
 
 % { class(NAME, DAY, HOUR, TEACHER, SEATS) Class(NAM2)}
@@ -126,9 +126,9 @@ classSentence(StackIn, StackOut) --> class(ClassList), [are, in, the, same, room
 classSentence(StackIn, StackOut) --> class(ClassList), [have, the, same, teacher], {addToStack(StackIn, sameTeacher(ClassList), StackOut) }.
 classSentence(StackIn, StackOut) --> class(ClassList), [are, on, the, same, day], {addToStack(StackIn, sameDay(ClassList), StackOut) }.
 classSentence(StackIn, StackOut) --> class(ClassList), [is, in], room(RoomNumber), {addToStack(StackIn, classRoom(ClassList, RoomNumber), StackOut) }.
-classSentence(StackIn, StackOut) --> class(ClassList), [is, before], class(ClassList2), {addToStack(StackIn, classBefore(ClassList, ClassList2), StackOut) }.
+classSentence(StackIn, StackOut) --> class(ClassList), [is, before], class(ClassList2), {addClassToStack(StackIn, classBefore(ClassList, ClassList2), StackOut) }.
 classSentence(StackIn, StackOut) --> class(ClassList), [is, after], class(ClassList2), {addToStack(StackIn, classAfter(ClassList, ClassList2), StackOut) }.
-classSentence(StackIn, StackOut) --> class(ClassList), [has], students(StudentsNumber), {addToStack(StackIn, classStudents(ClassList, StudentsNumber), StackOut) }.
+classSentence(StackIn, StackOut) --> class(ClassList), [has], students(StudentsNumber), {addClassToStack(StackIn, classStudents(ClassList, StudentsNumber), StackOut) }.
 
 %roomSentence(StackIn, StackOut) --> room(RoomNumber), roomDescription, students(StudentsNumber), { addToStack(StackIn, seats(RoomName, StudentsNumber), StackOut) }.
 roomSentence(StackIn, StackOut) --> room(RoomName), roomDescription, students(StudentsNumber), { addRoomToStack(StackIn, seats(RoomName, StudentsNumber), StackOut) }.
@@ -158,14 +158,48 @@ addTeacherToStack(Stack, teacher(TeacherName, ClassList), StackOut) :-
 	teacher(TeacherNumber),
 	StackOut = [teacher(TeacherName, TeacherNumber, ClassList)|Stack].
 
+
+% class : classIn([classes], room)
+% class : teacherBy([classes], prof)
+% class : before(class1, class2)
+% class : after(class1, class2)
+% class : sameDay([classes])
+% class : sameTeacher()
+
+addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOut) :-
+	\+ member(class(ClassNameBefore, _, _, _, _, _, _), Stack),
+	\+ member(class(ClassNameAfter, _, _, _, _, _, _), Stack),
+	%class(ClassNumber, StudentsNumber), %TODO maybe at the end to unify with studenNumber
+	DayBefore in 1..5,
+	DayAfter in 1..5,
+	HourBefore in 1..5, 
+	HourAfter in 1..5,
+	%( DayBefore #= DayAfter #=> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #=> DayBefore #< DayAfter ),
+	%( DayBefore #= DayAfter #=> HourBefore #< HourAfter ),
+	StackOut = [class(ClassNameBefore, ClassNumberBefore, TeachbyBefore, RoomBefore, DayBefore, HourBefore, StudentsNumberBefore), class(ClassNameAfter, ClassNumberAfter, TeachbyAfter, RoomAfter, DayAfter, HourAfter, StudentsNumberAfter) | Stack].
+
+
 %% addClassToStack(Stack, Representation, StackOut)
 %
 % addClassToStack/3
 %
-% @class representation : class(ClassName, ClassNumber, Teachby, Room, Day, Hour)
+% @class representation : class(ClassName, ClassNumber, Teachby, Room, Day, Hour, NumberStudents)
 %
-%addClassToStack(Stack, classRoom([ClassName], RoomNumber), StackOut) :-
-%	\+ member(class(ClassName, ClassNumber, Teachby, Room, Day, Hour), Stack),
+addClassToStack(Stack, classStudents([ClassName], StudentsNumber), StackOut) :-
+	select(class(ClassName, ClassNumber, Teachby, Room, Day, Hour, _), Stack, ListOut),
+	class(ClassNumber, StudentsNumber),
+	StackOut = [class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber) | ListOut].
+addClassToStack(Stack, classStudents([ClassName], StudentsNumber), StackOut) :-
+	\+ select(class(ClassName, _, _, _, _, _, _), Stack, ListOut),
+	class(ClassNumber, StudentsNumber),
+	StackOut = [class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber) | Stack].
+
+
+%TODO: class after is just opposite of classBefore
+
+
+
+
 %TODO: use select & member to get and remove from list of objects
 %Donc lidee cest de recup le goal envoyé par le parser et dajouter lobject class en fonction + les contraintes
 % en verifiant si la class existe déjà dans la liste ou pas.
@@ -202,6 +236,7 @@ updateStack([teacher(TeacherName, TeacherNumber, ClassList)|Stack], NewClass, [t
 % ----- CONSTANT VALUES -----
 % 10 teacher --> list lenght(ListTeacher, 10)
 
+%Should block here
 teacher(1).
 teacher(2).
 teacher(3).
@@ -231,7 +266,7 @@ class(5, 10).
 %	room(...)
 %
 
-
+ 
 % --
 % -- TEST
 % --
@@ -245,8 +280,9 @@ test(teaching) :-
 	phrase(teacherSentence(_,_), [prof, rob, teaches, class, c1]).
 
 test(class) :-
+	emptyStack(X),
 	phrase(classSentence(_,_), [class, c1, is, in, room, 102]),
-	phrase(classSentence(_,_), [class, c1, is, before, class, c2]),
+	phrase(classSentence(X,_), [class, c1, is, before, class, c2]),
 	phrase(classSentence(_,_), [classes, c1, and, c2, are, in, the, same, room]),
 	phrase(classSentence(_,_), [classes, c1, c2, and, c3, have, the, same, teacher]).
 
@@ -264,15 +300,19 @@ test(stackRoom) :-
 	%phrase(roomSentence(Stack, [seats(102, 100)]), [room, 102, seats, 100, students]).
 	phrase(roomSentence(Stack, [room(102, 3, 100)]), [room, 102, seats, 100, students]).
 
-test(stackClass) :-
-	emptyStack(Stack),
-	phrase(classSentence(Stack, [sameRoom([c1,c2,c3])]), [classes, c1, c2, and, c3, are, in, the, same, room]),
-	phrase(classSentence(Stack, [sameTeacher([c1,c2])]), [classes, c1, and, c2, have, the, same, teacher]),
-	phrase(classSentence(Stack, [sameDay([c1,c2])]), [classes, c1, and, c2, are, on, the, same, day]),
-	phrase(classSentence(Stack, [classRoom([c1], 102)]), [class, c1, is, in, room, 102]),
-	phrase(classSentence(Stack, [classStudents([c1], 45)]), [class, c1, has, 45, students]),
-	phrase(classSentence(Stack, [classAfter([c1], [c2])]), [class, c1, is, after, class, c2]).
+% test(stackClass) :-
+% 	emptyStack(Stack),
+% 	phrase(classSentence(Stack, [sameRoom([c1,c2,c3])]), [classes, c1, c2, and, c3, are, in, the, same, room]),
+% 	phrase(classSentence(Stack, [sameTeacher([c1,c2])]), [classes, c1, and, c2, have, the, same, teacher]),
+% 	phrase(classSentence(Stack, [sameDay([c1,c2])]), [classes, c1, and, c2, are, on, the, same, day]),
+% 	phrase(classSentence(Stack, [classRoom([c1], 102)]), [class, c1, is, in, room, 102]),
+% 	phrase(classSentence([class(c1, _, _, _, _, _, _)], [class(c1, 1, _, _, _, _, 30)]), [class, c1, has, 30, students]),
+% 	phrase(classSentence(Stack, [classAfter([c1], [c2])]), [class, c1, is, after, class, c2]).
 
+ test(stackClass) :-
+ 	emptyStack(Stack),
+ 	phrase(classSentence([class(c1, _, _, _, _, _, _)], [class(c1, 1, _, _, _, _, 30)]), [class, c1, has, 30, students]),
+	phrase(classSentence(Stack, [classAfter([c1], [c2])]), [class, c1, is, before, class, c2]).
 
 
 
