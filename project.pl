@@ -38,6 +38,12 @@
 % ->
 % 5) comment attribuer un numéro à class/teacher qui fit ceux qui existe mais sans essayer dautre numéro
 
+% --- VENDREDI 24 ---
+% 6) pour studentnumber: Nbr = X ou Nbr #= X
+% 7) crée contraintes au fur et a mesure : essaye dajouter contraintes pendant parsing. Faut il supprimer mon goal de la liste ou je peux modifier la contrainte sans supprimer ?
+
+% 7.1) ou à la fin en créant une liste de 5 elem C1 C2 C3 C4 C5 et lire la liste de goals et completer tout
+
 %% ------ DRAFT IDEAS -----
 
 % maybe possible de créer directe des contraintes comme before(c1, c2) -> c1 #< c2
@@ -174,7 +180,7 @@ addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOu
 	DayAfter in 1..5,
 	HourBefore in 1..5, 
 	HourAfter in 1..5,
-	%( DayBefore #= DayAfter #=> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #=> DayBefore #< DayAfter ),
+	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ),
 	%( DayBefore #= DayAfter #=> HourBefore #< HourAfter ),
 	StackOut = [class(ClassNameBefore, ClassNumberBefore, TeachbyBefore, RoomBefore, DayBefore, HourBefore, StudentsNumberBefore), class(ClassNameAfter, ClassNumberAfter, TeachbyAfter, RoomAfter, DayAfter, HourAfter, StudentsNumberAfter) | Stack].
 
@@ -196,7 +202,8 @@ addClassToStack(Stack, classStudents([ClassName], StudentsNumber), StackOut) :-
 
 
 %TODO: class after is just opposite of classBefore
-
+%TODO: No need to use select, you can modify VAR inside directly
+%TODO: #==> not #=>
 
 
 
