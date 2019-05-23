@@ -67,7 +67,7 @@
 % class : sameDay([classes])
 % room 	: seats(room, nbr_students)
 
-
+% !!!!! IMPORTANT !!!!!!! Pour les association nombres/name, le faire à la fin, et cest student number qui définit ca.
 
 
 % --
@@ -133,7 +133,7 @@ classSentence(StackIn, StackOut) --> class(ClassList), [have, the, same, teacher
 classSentence(StackIn, StackOut) --> class(ClassList), [are, on, the, same, day], {addToStack(StackIn, sameDay(ClassList), StackOut) }.
 classSentence(StackIn, StackOut) --> class(ClassList), [is, in], room(RoomNumber), {addToStack(StackIn, classRoom(ClassList, RoomNumber), StackOut) }.
 classSentence(StackIn, StackOut) --> class(ClassList), [is, before], class(ClassList2), {addClassToStack(StackIn, classBefore(ClassList, ClassList2), StackOut) }.
-classSentence(StackIn, StackOut) --> class(ClassList), [is, after], class(ClassList2), {addToStack(StackIn, classAfter(ClassList, ClassList2), StackOut) }.
+classSentence(StackIn, StackOut) --> class(ClassList), [is, after], class(ClassList2), {addClassToStack(StackIn, classBefore(ClassList2, ClassList), StackOut) }. % Class after is just the opposite of class Before
 classSentence(StackIn, StackOut) --> class(ClassList), [has], students(StudentsNumber), {addClassToStack(StackIn, classStudents(ClassList, StudentsNumber), StackOut) }.
 
 %roomSentence(StackIn, StackOut) --> room(RoomNumber), roomDescription, students(StudentsNumber), { addToStack(StackIn, seats(RoomName, StudentsNumber), StackOut) }.
@@ -167,23 +167,8 @@ addTeacherToStack(Stack, teacher(TeacherName, ClassList), StackOut) :-
 
 % class : classIn([classes], room)
 % class : teacherBy([classes], prof)
-% class : before(class1, class2)
-% class : after(class1, class2)
 % class : sameDay([classes])
 % class : sameTeacher()
-
-addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOut) :-
-	\+ member(class(ClassNameBefore, _, _, _, _, _, _), Stack),
-	\+ member(class(ClassNameAfter, _, _, _, _, _, _), Stack),
-	%class(ClassNumber, StudentsNumber), %TODO maybe at the end to unify with studenNumber
-	DayBefore in 1..5,
-	DayAfter in 1..5,
-	HourBefore in 1..5, 
-	HourAfter in 1..5,
-	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ),
-	%( DayBefore #= DayAfter #=> HourBefore #< HourAfter ),
-	StackOut = [class(ClassNameBefore, ClassNumberBefore, TeachbyBefore, RoomBefore, DayBefore, HourBefore, StudentsNumberBefore), class(ClassNameAfter, ClassNumberAfter, TeachbyAfter, RoomAfter, DayAfter, HourAfter, StudentsNumberAfter) | Stack].
-
 
 %% addClassToStack(Stack, Representation, StackOut)
 %
@@ -191,13 +176,52 @@ addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOu
 %
 % @class representation : class(ClassName, ClassNumber, Teachby, Room, Day, Hour, NumberStudents)
 %
+
+addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOut) :-
+	\+ member(class(ClassNameBefore, _, _, _, _, _, _), Stack),
+	\+ member(class(ClassNameAfter, _, _, _, _, _, _), Stack),
+	%class(ClassNumberBefore, StudentsNumberBefore), %TODO maybe at the end to unify with studenNumber
+	%class(ClassNumberAfter, StudentsNumberAfter),
+	DayBefore in 1..5,
+	DayAfter in 1..5,
+	HourBefore in 1..5, 
+	HourAfter in 1..5,
+	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ),
+	StackOut = [class(ClassNameBefore, ClassNumberBefore, TeachbyBefore, RoomBefore, DayBefore, HourBefore, StudentsNumberBefore), class(ClassNameAfter, ClassNumberAfter, TeachbyAfter, RoomAfter, DayAfter, HourAfter, StudentsNumberAfter) | Stack].
+% C1 is in Stack -> Push C2
+addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOut) :-
+	member(class(ClassNameBefore, _, _, _, DayBefore, HourBefore, _), Stack),
+	\+ member(class(ClassNameAfter, _, _, _, _, _, _), Stack),
+	DayAfter in 1..5,
+	HourAfter in 1..5,
+	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ),
+	StackOut = [class(ClassNameAfter, ClassNumberAfter, TeachbyAfter, RoomAfter, DayAfter, HourAfter, StudentsNumberAfter) | Stack].
+% C2 is in Stack -> Push C1
+addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOut) :-
+	\+ member(class(ClassNameBefore, _, _, _, DayBefore, HourBefore, _), Stack),
+	member(class(ClassNameAfter, _, _, _, _, _, _), Stack),
+	DayBefore in 1..5,
+	HourBefore in 1..5,
+	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ),
+	StackOut = [class(ClassNameBefore, ClassNumberBefore, TeachbyBefore, RoomBefore, DayBefore, HourBefore, StudentsNumberBefore) | Stack].
+% Both classes are already in stack, just adding constraintes
+addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOut) :-
+	member(class(ClassNameBefore, _, _, _, DayBefore, HourBefore, _), Stack),
+	member(class(ClassNameAfter, _, _, _, DayAfter, HourAfter, _), Stack),
+	DayBefore in 1..5,
+	DayAfter in 1..5,
+	HourBefore in 1..5, 
+	HourAfter in 1..5,
+	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ).
+
 addClassToStack(Stack, classStudents([ClassName], StudentsNumber), StackOut) :-
-	select(class(ClassName, ClassNumber, Teachby, Room, Day, Hour, _), Stack, ListOut),
-	class(ClassNumber, StudentsNumber),
-	StackOut = [class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber) | ListOut].
+	member(class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber), Stack),
+	class(ClassNumber, Number),
+	StudentsNumber #= Number.
+	%StackOut = [class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber) | ListOut].
 addClassToStack(Stack, classStudents([ClassName], StudentsNumber), StackOut) :-
-	\+ select(class(ClassName, _, _, _, _, _, _), Stack, ListOut),
-	class(ClassNumber, StudentsNumber),
+	\+ member(class(ClassName, _, _, _, _, _, _), Stack),
+	class(ClassNumber, StudentsNumber), 
 	StackOut = [class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber) | Stack].
 
 
@@ -319,7 +343,9 @@ test(stackRoom) :-
  test(stackClass) :-
  	emptyStack(Stack),
  	phrase(classSentence([class(c1, _, _, _, _, _, _)], [class(c1, 1, _, _, _, _, 30)]), [class, c1, has, 30, students]),
-	phrase(classSentence(Stack, [classAfter([c1], [c2])]), [class, c1, is, before, class, c2]).
+	phrase(classSentence(Stack, [class(c1, _,_,_,_,_,_), class(c2, _,_,_,_,_,_)]), [class, c1, is, before, class, c2]),
+	phrase(classSentence([class(c1, _,_,_,_,_,_)], [class(c2, _,_,_,_,_,_), class(c1, _,_,_,_,_,_)]), [class, c1, is, before, class, c2]),
+	phrase(classSentence(Stack, [class(c2, _,_,_,_,_,_), class(c1, _,_,_,_,_,_)]), [class, c1, is, after, class, c2]).
 
 
 
