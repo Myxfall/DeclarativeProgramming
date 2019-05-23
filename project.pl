@@ -39,10 +39,10 @@
 % 5) comment attribuer un numéro à class/teacher qui fit ceux qui existe mais sans essayer dautre numéro
 
 % --- VENDREDI 24 ---
-% 6) pour studentnumber: Nbr = X ou Nbr #= X
+% 6) pour studentnumber: Nbr = X ou Nbr #= X, Si je sais déjà que ca va être ca, est ce que je dois quand même utiliser #= au cas ou
 % 7) crée contraintes au fur et a mesure : essaye dajouter contraintes pendant parsing. Faut il supprimer mon goal de la liste ou je peux modifier la contrainte sans supprimer ?
-
 % 7.1) ou à la fin en créant une liste de 5 elem C1 C2 C3 C4 C5 et lire la liste de goals et completer tout
+% 8) le parser ne crée pas doffice toutes les classes/room, du coup comment creeer les restantes a la fin?
 
 %% ------ DRAFT IDEAS -----
 
@@ -68,7 +68,7 @@
 % room 	: seats(room, nbr_students)
 
 % !!!!! IMPORTANT !!!!!!! Pour les association nombres/name, le faire à la fin, et cest student number qui définit ca.
-
+% peut être que "VAR in 1..10" doit être à la fin pour chaque classes
 
 % --
 % -- MAIN PROGRAM
@@ -131,7 +131,7 @@ teacherSentence(StackIn, StackOut) --> teacherSuppl, teacherDescription, class([
 classSentence(StackIn, StackOut) --> class(ClassList), [are, in, the, same, room], {addToStack(StackIn, sameRoom(ClassList), StackOut) }.
 classSentence(StackIn, StackOut) --> class(ClassList), [have, the, same, teacher], {addToStack(StackIn, sameTeacher(ClassList), StackOut) }.
 classSentence(StackIn, StackOut) --> class(ClassList), [are, on, the, same, day], {addToStack(StackIn, sameDay(ClassList), StackOut) }.
-classSentence(StackIn, StackOut) --> class(ClassList), [is, in], room(RoomNumber), {addToStack(StackIn, classRoom(ClassList, RoomNumber), StackOut) }.
+classSentence(StackIn, StackOut) --> class(ClassList), [is, in], room(RoomNumber), {addClassToStack(StackIn, classRoom(ClassList, RoomNumber), StackOut) }.
 classSentence(StackIn, StackOut) --> class(ClassList), [is, before], class(ClassList2), {addClassToStack(StackIn, classBefore(ClassList, ClassList2), StackOut) }.
 classSentence(StackIn, StackOut) --> class(ClassList), [is, after], class(ClassList2), {addClassToStack(StackIn, classBefore(ClassList2, ClassList), StackOut) }. % Class after is just the opposite of class Before
 classSentence(StackIn, StackOut) --> class(ClassList), [has], students(StudentsNumber), {addClassToStack(StackIn, classStudents(ClassList, StudentsNumber), StackOut) }.
@@ -165,8 +165,7 @@ addTeacherToStack(Stack, teacher(TeacherName, ClassList), StackOut) :-
 	StackOut = [teacher(TeacherName, TeacherNumber, ClassList)|Stack].
 
 
-% class : classIn([classes], room)
-% class : teacherBy([classes], prof)
+% class : teacherBy([classes], prof) peut être fait à la fin, en parcourant les différent teacher list et ajouter les contraintes dans les classes
 % class : sameDay([classes])
 % class : sameTeacher()
 
@@ -214,6 +213,7 @@ addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOu
 	HourAfter in 1..5,
 	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ).
 
+% Constraintes on student number
 addClassToStack(Stack, classStudents([ClassName], StudentsNumber), StackOut) :-
 	member(class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber), Stack),
 	class(ClassNumber, Number),
@@ -224,6 +224,45 @@ addClassToStack(Stack, classStudents([ClassName], StudentsNumber), StackOut) :-
 	class(ClassNumber, StudentsNumber), 
 	StackOut = [class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber) | Stack].
 
+% Constraintes on class room
+addClassToStack(Stack, classRoom([ClassName], RoomNumber), StackOut) :-
+	\+ member(class(ClassName, _, _, Room, _, _, _), Stack),
+	Room #= RoomNumber, % Should be name or associated name of ROOM ?
+	StackOut = [class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber) | Stack].
+addClassToStack(Stack, classRoom([ClassName], RoomNumber), StackOut) :-
+	member(class(ClassName, _, _, Room, _, _, _), Stack),
+	Room #= RoomNumber. % Should be name or associated name of ROOM ?
+
+% Constraintes on same room classes
+addClassToStack(Stack, sameRoom(ClassList), StackOut) :-
+	goThroughSameRoom(ClassList, NewClasses, [Room1, Room2], Stack),
+	Room1 #= Room2,
+	StackOut = [NewClasses | Stack].
+	%StackOut = [Room1, Room2 | Stack].
+addClassToStack(Stack, sameRoom(ClassList), StackOut) :-
+	goThroughSameRoom(ClassList, NewClasses, [Room1, Room2, Room3], Stack),
+	Room1 #= Room2,
+	Room2 #= Room3,
+	StackOut = [NewClasses | Stack].
+
+% Used to go through a list of Class and add to an accumulateur. This allows me to handle in a better way having several classes
+% and prevent me to create 9 differents predicates, does c1 exists in stack but c2 and c3 not, etc, etc...
+goThroughSameRoom([], [], [], Stack).
+goThroughSameRoom([ClassName|RestClasses], [NewClass|ClassesOut], [NewRoom|RoomOut], Stack) :-
+	\+ member(class(ClassName, _, _, _, _, _, _), Stack),
+	NewClass = class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber),
+	NewRoom = Room,
+	goThroughSameRoom(RestClasses, ClassesOut, RoomOut, Stack).
+goThroughSameRoom([ClassName|RestClasses], ClassesOut, [NewRoom|RoomOut], Stack) :-
+	member(class(ClassName, _, _, Room, _, _, _), Stack),
+	NewRoom = Room,
+	goThroughSameRoom(RestClasses, ClassesOut, RoomOut, Stack).
+
+
+boucle([], []).
+boucle([H|T], [HeadAcc | TailAcc]) :-
+	HeadAcc = H,
+	boucle(T, TailAcc).
 
 %TODO: class after is just opposite of classBefore
 %TODO: No need to use select, you can modify VAR inside directly
@@ -312,10 +351,10 @@ test(teaching) :-
 
 test(class) :-
 	emptyStack(X),
-	phrase(classSentence(_,_), [class, c1, is, in, room, 102]),
+	phrase(classSentence(X,_), [class, c1, is, in, room, 102]),
 	phrase(classSentence(X,_), [class, c1, is, before, class, c2]),
-	phrase(classSentence(_,_), [classes, c1, and, c2, are, in, the, same, room]),
-	phrase(classSentence(_,_), [classes, c1, c2, and, c3, have, the, same, teacher]).
+	phrase(classSentence(X,_), [classes, c1, and, c2, are, in, the, same, room]),
+	phrase(classSentence(X,_), [classes, c1, c2, and, c3, have, the, same, teacher]).
 
 test(room) :-
 	phrase(roomSentence(_,_), [room, 102, seats, 100, students]).
@@ -345,7 +384,9 @@ test(stackRoom) :-
  	phrase(classSentence([class(c1, _, _, _, _, _, _)], [class(c1, 1, _, _, _, _, 30)]), [class, c1, has, 30, students]),
 	phrase(classSentence(Stack, [class(c1, _,_,_,_,_,_), class(c2, _,_,_,_,_,_)]), [class, c1, is, before, class, c2]),
 	phrase(classSentence([class(c1, _,_,_,_,_,_)], [class(c2, _,_,_,_,_,_), class(c1, _,_,_,_,_,_)]), [class, c1, is, before, class, c2]),
-	phrase(classSentence(Stack, [class(c2, _,_,_,_,_,_), class(c1, _,_,_,_,_,_)]), [class, c1, is, after, class, c2]).
+	phrase(classSentence(Stack, [class(c2,_,_,_,_,_,_), class(c1,_,_,_,_,_,_)]), [class, c1, is, after, class, c2]),
+ 	phrase(classSentence(Stack, [class(c1,_,_,102,0,_,_)]), [class, c1, is, in, room, 102]),
+ 	phrase(classSentence([class(c1,_,_,_,_,_,_)], [class(c1,_,_,102,_,_,_)]), [class, c1, is, in, room, 102]).
 
 
 
