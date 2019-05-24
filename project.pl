@@ -23,7 +23,7 @@
 % 	CLASS #< CLASS2
 % 	CLass(NAME, SEATS)
 
-% 	push CLASS, CLASS2 
+% 	push CLASS, CLASS2   
 
 % 	PUSH 
 
@@ -40,9 +40,11 @@
 
 % --- VENDREDI 24 ---
 % 6) pour studentnumber: Nbr = X ou Nbr #= X, Si je sais déjà que ca va être ca, est ce que je dois quand même utiliser #= au cas ou
-% 7) crée contraintes au fur et a mesure : essaye dajouter contraintes pendant parsing. Faut il supprimer mon goal de la liste ou je peux modifier la contrainte sans supprimer ?
+% X) crée contraintes au fur et a mesure : essaye dajouter contraintes pendant parsing. Faut il supprimer mon goal de la liste ou je peux modifier la contrainte sans supprimer ?
 % 7.1) ou à la fin en créant une liste de 5 elem C1 C2 C3 C4 C5 et lire la liste de goals et completer tout
-% 8) le parser ne crée pas doffice toutes les classes/room, du coup comment creeer les restantes a la fin?
+% 8) le parser ne crée pas doffice toutes les classes/room, du coup comment creeer les restantes a la fin? ou ne pas les crer alors ?
+% 9) probleme dassociation name/number, obligé de le faire à la fin.
+% 10) how to block(-,-), does not work
 
 %% ------ DRAFT IDEAS -----
 
@@ -128,9 +130,9 @@ teacherSentence(StackIn, StackOut) --> teacherSuppl, teacherDescription, class([
 %classSentence(StackIn, StackOut) --> class(ClassList), classDescription, class(ClassList2).
 
 %% Breaking down generality since we have to generates specific "Representation" for the constraints
-classSentence(StackIn, StackOut) --> class(ClassList), [are, in, the, same, room], {addToStack(StackIn, sameRoom(ClassList), StackOut) }.
-classSentence(StackIn, StackOut) --> class(ClassList), [have, the, same, teacher], {addToStack(StackIn, sameTeacher(ClassList), StackOut) }.
-classSentence(StackIn, StackOut) --> class(ClassList), [are, on, the, same, day], {addToStack(StackIn, sameDay(ClassList), StackOut) }.
+classSentence(StackIn, StackOut) --> class(ClassList), [are, in, the, same, room], {addClassToStack(StackIn, sameRoom(ClassList), StackOut) }.
+classSentence(StackIn, StackOut) --> class(ClassList), [have, the, same, teacher], {addClassToStack(StackIn, sameTeacher(ClassList), StackOut) }.
+classSentence(StackIn, StackOut) --> class(ClassList), [are, on, the, same, day], {addClassToStack(StackIn, sameDay(ClassList), StackOut) }.
 classSentence(StackIn, StackOut) --> class(ClassList), [is, in], room(RoomNumber), {addClassToStack(StackIn, classRoom(ClassList, RoomNumber), StackOut) }.
 classSentence(StackIn, StackOut) --> class(ClassList), [is, before], class(ClassList2), {addClassToStack(StackIn, classBefore(ClassList, ClassList2), StackOut) }.
 classSentence(StackIn, StackOut) --> class(ClassList), [is, after], class(ClassList2), {addClassToStack(StackIn, classBefore(ClassList2, ClassList), StackOut) }. % Class after is just the opposite of class Before
@@ -166,7 +168,7 @@ addTeacherToStack(Stack, teacher(TeacherName, ClassList), StackOut) :-
 
 
 % class : teacherBy([classes], prof) peut être fait à la fin, en parcourant les différent teacher list et ajouter les contraintes dans les classes
-% class : sameDay([classes])
+
 % class : sameTeacher()
 
 %% addClassToStack(Stack, Representation, StackOut)
@@ -237,13 +239,15 @@ addClassToStack(Stack, classRoom([ClassName], RoomNumber), StackOut) :-
 addClassToStack(Stack, sameRoom(ClassList), StackOut) :-
 	goThroughSameRoom(ClassList, NewClasses, [Room1, Room2], Stack),
 	Room1 #= Room2,
-	StackOut = [NewClasses | Stack].
+	%StackOut = [NewClasses | Stack].
+	append(NewClasses, Stack, StackOut).
 	%StackOut = [Room1, Room2 | Stack].
 addClassToStack(Stack, sameRoom(ClassList), StackOut) :-
 	goThroughSameRoom(ClassList, NewClasses, [Room1, Room2, Room3], Stack),
 	Room1 #= Room2,
 	Room2 #= Room3,
-	StackOut = [NewClasses | Stack].
+	%StackOut = [NewClasses | Stack].
+	append(NewClasses, Stack, StackOut).
 
 % Used to go through a list of Class and add to an accumulateur. This allows me to handle in a better way having several classes
 % and prevent me to create 9 differents predicates, does c1 exists in stack but c2 and c3 not, etc, etc...
@@ -253,10 +257,55 @@ goThroughSameRoom([ClassName|RestClasses], [NewClass|ClassesOut], [NewRoom|RoomO
 	NewClass = class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber),
 	NewRoom = Room,
 	goThroughSameRoom(RestClasses, ClassesOut, RoomOut, Stack).
-goThroughSameRoom([ClassName|RestClasses], ClassesOut, [NewRoom|RoomOut], Stack) :-
+goThroughSameRoom([ClassName|RestClasses], ClassesOut, [Room|RoomOut], Stack) :-
 	member(class(ClassName, _, _, Room, _, _, _), Stack),
-	NewRoom = Room,
+	%NewRoom = Room,
 	goThroughSameRoom(RestClasses, ClassesOut, RoomOut, Stack).
+
+% Constraintes on same day classes
+addClassToStack(Stack, sameDay(ClassList), StackOut) :-
+	goThroughSameDay(ClassList, NewClasses, [Day1, Day2], Stack),
+	Day1 #= Day2,
+	%StackOut = [NewClasses | Stack].
+	append(NewClasses, Stack, StackOut).
+addClassToStack(Stack, sameDay(ClassList), StackOut) :-
+	goThroughSameDay(ClassList, NewClasses, [Day1, Day2, Day3], Stack),
+	Day1 #= Day2,
+	Day2 #= Day3,
+	%StackOut = [NewClasses | Stack].
+	append(NewClasses, Stack, StackOut).
+		
+goThroughSameDay([], [], [], Stack).
+goThroughSameDay([ClassName|RestClasses], [NewClass|ClassesOut], [NewDay|RoomOut], Stack) :-
+	\+ member(class(ClassName, _, _, _, _, _, _), Stack),
+	NewClass = class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber),
+	NewDay = Day,
+	goThroughSameDay(RestClasses, ClassesOut, RoomOut, Stack).
+goThroughSameDay([ClassName|RestClasses], ClassesOut, [NewDay|RoomOut], Stack) :-
+	member(class(ClassName, _, _, _, Day, _, _), Stack),
+	NewDay = Day,
+	goThroughSameDay(RestClasses, ClassesOut, RoomOut, Stack).
+
+addClassToStack(Stack, sameTeacher(ClassList), StackOut) :-
+	goThroughSameTeacher(ClassList, NewClasses, [Teacher1, Teacher2], Stack),
+	Teacher1 #= Teacher2,
+	append(NewClasses, Stack, StackOut).
+addClassToStack(Stack, sameTeacher(ClassList), StackOut) :-
+	goThroughSameTeacher(ClassList, NewClasses, [Teacher1, Teacher2, Teacher3], Stack),
+	Teacher1 #= Teacher2,
+	Teacher2 #= Teacher3,
+	append(NewClasses, Stack, StackOut).
+
+goThroughSameTeacher([], [], [], Stack).
+goThroughSameTeacher([ClassName|RestClasses], [NewClasses|ClassesOut], [Teachby|TeacherOut], Stack) :-
+	\+ member(class(ClassName, _, _, _, _, _, _), Stack),
+	NewClasses = class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber),
+	goThroughSameTeacher(RestClasses, ClassesOut, TeacherOut, Stack).
+goThroughSameTeacher([ClassName|RestClasses], [NewClasses|ClassesOut], [Teachby|TeacherOut], Stack) :-
+	member(class(ClassName, _, Teachby, _, _, _, _), Stack),
+	goThroughSameTeacher(RestClasses, ClassesOut, TeacherOut, Stack).
+
+
 
 
 boucle([], []).
@@ -281,7 +330,8 @@ boucle([H|T], [HeadAcc | TailAcc]) :-
 %
 addRoomToStack(Stack, seats(RoomName, StudentsNumber), StackOut) :-
 	room(RoomNumber, StudentsNumber),
-	StackOut = [room(RoomName, RoomNumber, StudentsNumber)|Stack].
+	StdNbr #= StudentsNumber,
+	StackOut = [room(RoomName, RoomNumber, StdNbr)|Stack].
 
 
 %% updateStack(...)
@@ -305,6 +355,8 @@ updateStack([teacher(TeacherName, TeacherNumber, ClassList)|Stack], NewClass, [t
 
 % ----- CONSTANT VALUES -----
 % 10 teacher --> list lenght(ListTeacher, 10)
+
+% réduis le nombre pour tests
 
 %Should block here
 teacher(1).
@@ -340,6 +392,8 @@ class(5, 10).
 % --
 % -- TEST
 % --
+% class(ClassName, ClassNumber, Teachby, Room, Day, Hour, NumberStudents)
+
 :- begin_tests(base).
 
 test(prof) :-
@@ -386,7 +440,13 @@ test(stackRoom) :-
 	phrase(classSentence([class(c1, _,_,_,_,_,_)], [class(c2, _,_,_,_,_,_), class(c1, _,_,_,_,_,_)]), [class, c1, is, before, class, c2]),
 	phrase(classSentence(Stack, [class(c2,_,_,_,_,_,_), class(c1,_,_,_,_,_,_)]), [class, c1, is, after, class, c2]),
  	phrase(classSentence(Stack, [class(c1,_,_,102,0,_,_)]), [class, c1, is, in, room, 102]),
- 	phrase(classSentence([class(c1,_,_,_,_,_,_)], [class(c1,_,_,102,_,_,_)]), [class, c1, is, in, room, 102]).
+ 	phrase(classSentence([class(c1,_,_,_,_,_,_)], [class(c1,_,_,102,_,_,_)]), [class, c1, is, in, room, 102]),
+ 	phrase(classSentence(Stack, [class(c1, _, _, Room, _, _, _), class(c2, _, _, Room, _, _, _)]), [classes, c1, and, c2, are, in, the, same, room]),
+ 	phrase(classSentence(Stack, [class(c1, _, _, _, Day, _, _), class(c2, _, _, _, Day, _, _)]), [classes, c1, and, c2, are, on, the, same, day]),
+ 	phrase(classSentence(Stack, [class(c1, _, _, _, Day, _, _), class(c2, _, _, _, Day, _, _), class(c3, _, _, _, Day, _, _)]), [classes, c1, c2, and, c3, are, on, the, same, day]),
+ 	phrase(classSentence([class(c3, _, _, _, Day, _, _)], [class(c1, _, _, _, Day, _, _), class(c2, _, _, _, Day, _, _), class(c3, _, _, _, Day, _, _)]), [classes, c1, and, c2, are, on, the, same, day]),
+	phrase(classSentence(Stack, [class(c1, _, _, _, _, _, _), class(c2, _, _, _, _, _, _)]), [classes, c1, and, c2, have, the, same, teacher]).
+
 
 
 
