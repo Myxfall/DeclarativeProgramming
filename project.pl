@@ -344,6 +344,13 @@ updateStack([teacher(TeacherName, TeacherNumber, ClassList)|Stack], NewClass, [t
 % --
 
 
+splitStop([], [[]]).
+splitStop([stop|T], [[]|T2]) :-
+    splitStop(T, T2).
+splitStop([H|T], [[H|T2]|T3]) :-
+    dif(H, stop),
+    splitStop(T, [T2|T3]).
+
 %% parse(Line, StackIn, StackOut)
 %
 % parse/3
