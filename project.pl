@@ -141,6 +141,13 @@ classSentence(StackIn, StackOut) --> class(ClassList), [has], students(StudentsN
 %roomSentence(StackIn, StackOut) --> room(RoomNumber), roomDescription, students(StudentsNumber), { addToStack(StackIn, seats(RoomName, StudentsNumber), StackOut) }.
 roomSentence(StackIn, StackOut) --> room(RoomName), roomDescription, students(StudentsNumber), { addRoomToStack(StackIn, seats(RoomName, StudentsNumber), StackOut) }.
 
+fullstop --> [fullstop].
+fullstop --> [.].
+
+line(StackIn, StackOut) --> teacherSentence(StackIn, StackOut), fullstop.
+line(StackIn, StackOut) --> classSentence(StackIn, StackOut), fullstop.
+line(StackIn, StackOut) --> roomSentence(StackIn, StackOut), fullstop.
+
 %% emptyStack(X)
 %
 % emptyStack/1 Creates a new empty stack
@@ -305,25 +312,6 @@ goThroughSameTeacher([ClassName|RestClasses], [NewClasses|ClassesOut], [Teachby|
 	member(class(ClassName, _, Teachby, _, _, _, _), Stack),
 	goThroughSameTeacher(RestClasses, ClassesOut, TeacherOut, Stack).
 
-
-
-
-boucle([], []).
-boucle([H|T], [HeadAcc | TailAcc]) :-
-	HeadAcc = H,
-	boucle(T, TailAcc).
-
-%TODO: class after is just opposite of classBefore
-%TODO: No need to use select, you can modify VAR inside directly
-%TODO: #==> not #=>
-
-
-
-%TODO: use select & member to get and remove from list of objects
-%Donc lidee cest de recup le goal envoyé par le parser et dajouter lobject class en fonction + les contraintes
-% en verifiant si la class existe déjà dans la liste ou pas.
-	
-
 %% addRoomToStack(Stack, Representation, StackOut)
 %
 %
@@ -332,7 +320,6 @@ addRoomToStack(Stack, seats(RoomName, StudentsNumber), StackOut) :-
 	room(RoomNumber, StudentsNumber),
 	StdNbr #= StudentsNumber,
 	StackOut = [room(RoomName, RoomNumber, StdNbr)|Stack].
-
 
 %% updateStack(...)
 %
@@ -352,6 +339,28 @@ updateStack([teacher(TeacherName, TeacherNumber, ClassList)|Stack], NewClass, [t
 	\+ member(NewClass, ClassList),
 	append(ClassList, [NewClass], NewClassList).
 
+% --
+% -- PARSING
+% --
+
+
+%% parse(Line, StackIn, StackOut)
+%
+% parse/3
+%
+% @param Line The current line being parsed
+% @param StackIn Current Stack with the goal representations
+% @param StackOut Stack being filled in
+parse(Line, StackIn, StackOut) :-
+  phrase(line(StackIn, StackOut), Line).
+
+parseText(Text, Out) :-
+  emptyStack(X),
+  foldl(parse, Text, X, Out).
+
+
+% ----- FINAL PREDICATE -----
+% Just utiliser ([ffc] variables), all_different pour variables qui doivent être différentes
 
 % ----- CONSTANT VALUES -----
 % 10 teacher --> list lenght(ListTeacher, 10)
@@ -434,24 +443,29 @@ test(stackRoom) :-
 % 	phrase(classSentence(Stack, [classAfter([c1], [c2])]), [class, c1, is, after, class, c2]).
 
  test(stackClass) :-
- 	emptyStack(Stack),
- 	phrase(classSentence([class(c1, _, _, _, _, _, _)], [class(c1, 1, _, _, _, _, 30)]), [class, c1, has, 30, students]),
+	emptyStack(Stack),
+	phrase(classSentence([class(c1, _, _, _, _, _, _)], [class(c1, 1, _, _, _, _, 30)]), [class, c1, has, 30, students]),
 	phrase(classSentence(Stack, [class(c1, _,_,_,_,_,_), class(c2, _,_,_,_,_,_)]), [class, c1, is, before, class, c2]),
 	phrase(classSentence([class(c1, _,_,_,_,_,_)], [class(c2, _,_,_,_,_,_), class(c1, _,_,_,_,_,_)]), [class, c1, is, before, class, c2]),
 	phrase(classSentence(Stack, [class(c2,_,_,_,_,_,_), class(c1,_,_,_,_,_,_)]), [class, c1, is, after, class, c2]),
- 	phrase(classSentence(Stack, [class(c1,_,_,102,0,_,_)]), [class, c1, is, in, room, 102]),
- 	phrase(classSentence([class(c1,_,_,_,_,_,_)], [class(c1,_,_,102,_,_,_)]), [class, c1, is, in, room, 102]),
- 	phrase(classSentence(Stack, [class(c1, _, _, Room, _, _, _), class(c2, _, _, Room, _, _, _)]), [classes, c1, and, c2, are, in, the, same, room]),
- 	phrase(classSentence(Stack, [class(c1, _, _, _, Day, _, _), class(c2, _, _, _, Day, _, _)]), [classes, c1, and, c2, are, on, the, same, day]),
- 	phrase(classSentence(Stack, [class(c1, _, _, _, Day, _, _), class(c2, _, _, _, Day, _, _), class(c3, _, _, _, Day, _, _)]), [classes, c1, c2, and, c3, are, on, the, same, day]),
- 	phrase(classSentence([class(c3, _, _, _, Day, _, _)], [class(c1, _, _, _, Day, _, _), class(c2, _, _, _, Day, _, _), class(c3, _, _, _, Day, _, _)]), [classes, c1, and, c2, are, on, the, same, day]),
+	phrase(classSentence(Stack, [class(c1,_,_,102,0,_,_)]), [class, c1, is, in, room, 102]),
+	phrase(classSentence([class(c1,_,_,_,_,_,_)], [class(c1,_,_,102,_,_,_)]), [class, c1, is, in, room, 102]),
+	phrase(classSentence(Stack, [class(c1, _, _, Room, _, _, _), class(c2, _, _, Room, _, _, _)]), [classes, c1, and, c2, are, in, the, same, room]),
+	phrase(classSentence(Stack, [class(c1, _, _, _, Day, _, _), class(c2, _, _, _, Day, _, _)]), [classes, c1, and, c2, are, on, the, same, day]),
+	phrase(classSentence(Stack, [class(c1, _, _, _, Day, _, _), class(c2, _, _, _, Day, _, _), class(c3, _, _, _, Day, _, _)]), [classes, c1, c2, and, c3, are, on, the, same, day]),
+	phrase(classSentence([class(c3, _, _, _, Day, _, _)], [class(c1, _, _, _, Day, _, _), class(c2, _, _, _, Day, _, _), class(c3, _, _, _, Day, _, _)]), [classes, c1, and, c2, are, on, the, same, day]),
 	phrase(classSentence(Stack, [class(c1, _, _, _, _, _, _), class(c2, _, _, _, _, _, _)]), [classes, c1, and, c2, have, the, same, teacher]).
 
+test(line) :-
+	emptyStack(Stack),
+	phrase(line(Stack,[teacher(steve, _, [c1,c2])]), [prof, steve, teaches, classes, c1, and, c2, fullstop]),
+	phrase(line(Stack, [class(c1, _,_,_,_,_,_), class(c2, _,_,_,_,_,_)]), [class, c1, is, before, class, c2, fullstop]),
+	phrase(line(Stack, [room(102, 3, 100)]), [room, 102, seats, 100, students, fullstop]).
 
 
-
-
-
+% [[room, 102, seats, 100, students, fullstop], [prof, steve, teaches, classes, c1, and, c2, fullstop], [class, c1, has, 30, students, fullstop], [classes, c1, and, c2, are, in, the, same, room, fullstop]].
+%"room 102 seats 100 students
+%prof steve teaches classes c1 and c2".
 
 
 
