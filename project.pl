@@ -167,24 +167,23 @@ addToStack(Stack, Representation, StackOut) :-
 
 %% addTeacherToStack(Stack, Representation, StackOut)
 %
+% addTeacherToStack/3 Push the teacher representation into the stack
 %
-%
+% @param Stack The current stack with all the representations
+% @param teacher(Name, Number) The goal it receives, will add constraintes depending on the goal form
+% @parem StackOut The Stack out with the new representation pushed into
 addTeacherToStack(Stack, teacher(TeacherName, ClassList), StackOut) :-
 	%teacher(TeacherNumber),
 	StackOut = [teacher(TeacherName, TeacherNumber, ClassList)|Stack].
 
-
-% class : teacherBy([classes], prof) peut être fait à la fin, en parcourant les différent teacher list et ajouter les contraintes dans les classes
-
-% class : sameTeacher()
-
 %% addClassToStack(Stack, Representation, StackOut)
 %
-% addClassToStack/3
+% addClassToStack/3 Add the class representation into the stack depending on the goal it receives
 %
+% @param Stack The current stack with all the representations
+% @param goal(X,Y,***) The goal it receives, will add constraintes depending on the goal form
+% @parem StackOut The Stack out with the new representation pushed into
 % @class representation : class(ClassName, ClassNumber, Teachby, Room, Day, Hour, NumberStudents)
-%
-
 addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOut) :-
 	\+ member(class(ClassNameBefore, _, _, _, _, _, _), Stack),
 	\+ member(class(ClassNameAfter, _, _, _, _, _, _), Stack),
@@ -314,8 +313,11 @@ goThroughSameTeacher([ClassName|RestClasses], [NewClasses|ClassesOut], [Teachby|
 
 %% addRoomToStack(Stack, Representation, StackOut)
 %
+% addRoomToStack/3 Push the Room representation into the stack
 %
-%
+% @param Stack The current stack with all the representations
+% @param room(Name, StudentsNumbers) The goal it receives, will add constraintes depending on the goal form
+% @parem StackOut The Stack out with the new representation pushed into
 addRoomToStack(Stack, seats(RoomName, StudentsNumber), StackOut) :-
 	room(RoomNumber, StudentsNumber),
 	StdNbr #= StudentsNumber,
@@ -351,12 +353,12 @@ timeTable(Data, TimeTable) :-
 	length(TeacherNumber, 3),
 	all_different(TeacherNumber),
 	buildTeacherList(TimeTable, TeachersList),
-	teacherConstraintes(TeacherNumber, TeachersList, TimeTable).
+	teacherConstraintes(TeacherNumber, TeachersList, TimeTable),
 
 	% Rooms
 	length(RoomNumber, 2),
 	all_different(RoomNumber),
-	buildRoomList(TimeTable, RoomsList).
+	buildRoomList(TimeTable, RoomsList),
 	roomConstraintes(RoomNumber, RoomsList, TimeTable).
 
 buildTeacherList([], []).
@@ -365,7 +367,7 @@ buildTeacherList([Teacher|Stack], [teacher(TeacherName, TeacherNumber, ClassList
 	buildTeacherList(Stack, TeachersList).
 buildTeacherList([Elem|Stack], TeacherList) :-
 	\+ Elem = teacher(_,_,_), 
-	buildTeacherList(Stack, TeacherList).
+	buildTeacherList(Stack, TeacherList). 
 
 teacherConstraintes([],[], _).
 teacherConstraintes([Teacher|Teachers], [teacher(TeacherName, Teacher, ClassList)|TeachersList], Stack) :-
@@ -400,12 +402,15 @@ roomConstraintes([RoomNumber|RoomsNumbers], [room(RoomName, RoomNumber, Students
 % -- PARSING
 % --
 
-splitStop([], []).
-splitStop([fullstop|T], [[]|T2]) :-
-    splitStop(T, T2).
-splitStop([H|T], [[H|T2]|T3]) :-
+%% splitFullstop(In, Out)
+%
+% splitFullstop/2 Receives a List of sentences and created a list of list of these sentences
+splitFullstop([], []).
+splitFullstop([fullstop|T], [[]|T2]) :-
+    splitFullstop(T, T2).
+splitFullstop([H|T], [[H|T2]|T3]) :-
     dif(H, stop),
-    splitStop(T, [T2|T3]).
+    splitFullstop(T, [T2|T3]).
 
 %% parse(Line, StackIn, StackOut)
 %
@@ -417,10 +422,16 @@ splitStop([H|T], [[H|T2]|T3]) :-
 parse(Line, StackIn, StackOut) :-
   phrase(line(StackIn, StackOut), Line).
 
-parseText(Text, Out) :-
-  emptyStack(X),
-  splitStop(Text, ListSentences),
-  foldl(parse, ListSentences, X, Out).
+%% parseText(Text, StackOut)
+%
+% parseText/2 Parse the text it receives and creates a list of sentences.
+%
+% @param Text The input text, in the format of [jones, teaches, something, fullstop, ...]
+% @param StackOut, The list of sentences created by the predicate
+parseText(Text, StackOut) :-
+  emptyStack(Stack),
+  splitFullstop(Text, ListSentences),
+  foldl(parse, ListSentences, Stack, StackOut).
 
 
 % ----- FINAL PREDICATE -----
