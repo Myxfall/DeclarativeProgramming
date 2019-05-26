@@ -144,9 +144,9 @@ roomSentence(StackIn, StackOut) --> room(RoomName), roomDescription, students(St
 fullstop --> [fullstop].
 fullstop --> [.].
 
-line(StackIn, StackOut) --> teacherSentence(StackIn, StackOut), fullstop.
-line(StackIn, StackOut) --> classSentence(StackIn, StackOut), fullstop.
-line(StackIn, StackOut) --> roomSentence(StackIn, StackOut), fullstop.
+line(StackIn, StackOut) --> teacherSentence(StackIn, StackOut).
+line(StackIn, StackOut) --> classSentence(StackIn, StackOut).
+line(StackIn, StackOut) --> roomSentence(StackIn, StackOut).
 
 %% emptyStack(X)
 %
@@ -170,7 +170,7 @@ addToStack(Stack, Representation, StackOut) :-
 %
 %
 addTeacherToStack(Stack, teacher(TeacherName, ClassList), StackOut) :-
-	teacher(TeacherNumber),
+	%teacher(TeacherNumber),
 	StackOut = [teacher(TeacherName, TeacherNumber, ClassList)|Stack].
 
 
@@ -225,12 +225,12 @@ addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOu
 % Constraintes on student number
 addClassToStack(Stack, classStudents([ClassName], StudentsNumber), StackOut) :-
 	member(class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber), Stack),
-	class(ClassNumber, Number),
+	%class(ClassNumber, Number),
 	StudentsNumber #= Number.
 	%StackOut = [class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber) | ListOut].
 addClassToStack(Stack, classStudents([ClassName], StudentsNumber), StackOut) :-
 	\+ member(class(ClassName, _, _, _, _, _, _), Stack),
-	class(ClassNumber, StudentsNumber), 
+	%class(ClassNumber, StudentsNumber), 
 	StackOut = [class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber) | Stack].
 
 % Constraintes on class room
@@ -339,13 +339,69 @@ updateStack([teacher(TeacherName, TeacherNumber, ClassList)|Stack], NewClass, [t
 	\+ member(NewClass, ClassList),
 	append(ClassList, [NewClass], NewClassList).
 
+
+% --
+% -- FINAL CONSTRAINTES
+% --
+
+timeTable(Data, TimeTable) :-
+	parseText(Data, TimeTable),
+
+	% Teachers
+	length(TeacherNumber, 3),
+	all_different(TeacherNumber),
+	buildTeacherList(TimeTable, TeachersList),
+	teacherConstraintes(TeacherNumber, TeachersList, TimeTable).
+
+	% Rooms
+	length(RoomNumber, 2),
+	all_different(RoomNumber),
+	buildRoomList(TimeTable, RoomsList).
+	roomConstraintes(RoomNumber, RoomsList, TimeTable).
+
+buildTeacherList([], []).
+buildTeacherList([Teacher|Stack], [teacher(TeacherName, TeacherNumber, ClassList)|TeachersList]) :-
+	Teacher = teacher(TeacherName, TeacherNumber, ClassList),
+	buildTeacherList(Stack, TeachersList).
+buildTeacherList([Elem|Stack], TeacherList) :-
+	\+ Elem = teacher(_,_,_), 
+	buildTeacherList(Stack, TeacherList).
+
+teacherConstraintes([],[], _).
+teacherConstraintes([Teacher|Teachers], [teacher(TeacherName, Teacher, ClassList)|TeachersList], Stack) :-
+	teacher(Teacher),
+	goThroughTeachBy(ClassList, Teacher, Stack),
+	teacherConstraintes(Teachers, TeachersList, Stack).
+
+goThroughTeachBy([], _, _).
+goThroughTeachBy([Class|ClassList], TeacherNumber, Stack) :-
+	member(class(Class, _,Teacher,_,_,_,_), Stack),
+	Teacher #= TeacherNumber,
+	goThroughTeachBy(ClassList, TeacherNumber, Stack).
+goThroughTeachBy([Class|ClassList], TeacherNumber, Stack) :-
+	\+ member(class(Class, _,_,_,_,_,_), Stack),
+	goThroughTeachBy(ClassList, TeacherNumber, Stack).
+
+buildRoomList([], []).
+buildRoomList([Room|Rooms], [Room|RoomsList]) :-
+	Room = room(RoomName, RoomNumber, Students),
+	buildRoomList(Rooms, RoomsList).
+buildRoomList([Room|Rooms], RoomsList) :-
+	\+ Room = room(_,_,_), 
+	buildRoomList(Rooms, RoomsList).
+
+roomConstraintes([], [], _).
+roomConstraintes([RoomNumber|RoomsNumbers], [room(RoomName, RoomNumber, Students)|RoomsList], TimeTable) :-
+	room(RoomNumber, Students),
+	roomConstraintes(RoomsNumbers, RoomsList, TimeTable).
+
+
 % --
 % -- PARSING
 % --
 
-
-splitStop([], [[]]).
-splitStop([stop|T], [[]|T2]) :-
+splitStop([], []).
+splitStop([fullstop|T], [[]|T2]) :-
     splitStop(T, T2).
 splitStop([H|T], [[H|T2]|T3]) :-
     dif(H, stop),
@@ -363,7 +419,8 @@ parse(Line, StackIn, StackOut) :-
 
 parseText(Text, Out) :-
   emptyStack(X),
-  foldl(parse, Text, X, Out).
+  splitStop(Text, ListSentences),
+  foldl(parse, ListSentences, X, Out).
 
 
 % ----- FINAL PREDICATE -----
@@ -378,16 +435,16 @@ parseText(Text, Out) :-
 teacher(1).
 teacher(2).
 teacher(3).
-teacher(4).
-teacher(5).
-teacher(6).
-teacher(7).
-teacher(8).
-teacher(9).
-teacher(10).
+% teacher(4).
+% teacher(5).
+% teacher(6).
+% teacher(7).
+% teacher(8).
+% teacher(9).
+% teacher(10).
 
 room(1, 35).
-room(2, 60).
+%room(2, 60).
 room(3, 100).
 
 class(1, 30).
@@ -465,14 +522,13 @@ test(stackRoom) :-
 
 test(line) :-
 	emptyStack(Stack),
-	phrase(line(Stack,[teacher(steve, _, [c1,c2])]), [prof, steve, teaches, classes, c1, and, c2, fullstop]),
-	phrase(line(Stack, [class(c1, _,_,_,_,_,_), class(c2, _,_,_,_,_,_)]), [class, c1, is, before, class, c2, fullstop]),
-	phrase(line(Stack, [room(102, 3, 100)]), [room, 102, seats, 100, students, fullstop]).
+	phrase(line(Stack,[teacher(steve, _, [c1,c2])]), [prof, steve, teaches, classes, c1, and, c2]),
+	phrase(line(Stack, [class(c1, _,_,_,_,_,_), class(c2, _,_,_,_,_,_)]), [class, c1, is, before, class, c2]),
+	phrase(line(Stack, [room(102, 3, 100)]), [room, 102, seats, 100, students]).
 
 
-% [[room, 102, seats, 100, students, fullstop], [prof, steve, teaches, classes, c1, and, c2, fullstop], [class, c1, has, 30, students, fullstop], [classes, c1, and, c2, are, in, the, same, room, fullstop]].
-%"room 102 seats 100 students
-%prof steve teaches classes c1 and c2".
+%[room, 102, seats, 100, students, fullstop, prof, steve, teaches, classes, c1, and, c2, fullstop, class, c1, has, 30, students, fullstop, classes, c1, and, c2, are, in, the, same, room, fullstop].
+%[prof, steve, teaches, classes, c1, fullstop, prof, rob, teaches, classes, c2, fullstop, prof, junior, teaches, classes, c3, fullstop ]
 
 
 
