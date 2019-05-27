@@ -153,6 +153,7 @@ line(StackIn, StackOut) --> roomSentence(StackIn, StackOut).
 % emptyStack/1 Creates a new empty stack
 %
 % @param X The new stack
+%
 emptyStack(X) :- X = [].
 
 %% addToStack(Stack, Representation, Stackout)
@@ -162,6 +163,7 @@ emptyStack(X) :- X = [].
 % @param Stack Current Stack
 % @param Representation The representation that should be pushed to the Stack
 % @param StackOut Updated Stack
+%
 addToStack(Stack, Representation, StackOut) :-
 	StackOut = [Representation|Stack].
 
@@ -172,6 +174,7 @@ addToStack(Stack, Representation, StackOut) :-
 % @param Stack The current stack with all the representations
 % @param teacher(Name, Number) The goal it receives, will add constraintes depending on the goal form
 % @parem StackOut The Stack out with the new representation pushed into
+%
 addTeacherToStack(Stack, teacher(TeacherName, ClassList), StackOut) :-
 	%teacher(TeacherNumber),
 	StackOut = [teacher(TeacherName, TeacherNumber, ClassList)|Stack].
@@ -184,6 +187,7 @@ addTeacherToStack(Stack, teacher(TeacherName, ClassList), StackOut) :-
 % @param goal(X,Y,***) The goal it receives, will add constraintes depending on the goal form
 % @parem StackOut The Stack out with the new representation pushed into
 % @class representation : class(ClassName, ClassNumber, Teachby, Room, Day, Hour, NumberStudents)
+%
 addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOut) :-
 	\+ member(class(ClassNameBefore, _, _, _, _, _, _), Stack),
 	\+ member(class(ClassNameAfter, _, _, _, _, _, _), Stack),
@@ -317,7 +321,7 @@ goThroughSameTeacher([ClassName|RestClasses], [NewClasses|ClassesOut], [Teachby|
 	\+ member(class(ClassName, _, _, _, _, _, _), Stack),
 	NewClasses = class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber),
 	goThroughSameTeacher(RestClasses, ClassesOut, TeacherOut, Stack).
-goThroughSameTeacher([ClassName|RestClasses], [NewClasses|ClassesOut], [Teachby|TeacherOut], Stack) :-
+goThroughSameTeacher([ClassName|RestClasses], ClassesOut, [Teachby|TeacherOut], Stack) :-
 	member(class(ClassName, _, Teachby, _, _, _, _), Stack),
 	goThroughSameTeacher(RestClasses, ClassesOut, TeacherOut, Stack).
 
@@ -328,6 +332,7 @@ goThroughSameTeacher([ClassName|RestClasses], [NewClasses|ClassesOut], [Teachby|
 % @param Stack The current stack with all the representations
 % @param room(Name, StudentsNumbers) The goal it receives, will add constraintes depending on the goal form
 % @parem StackOut The Stack out with the new representation pushed into
+%
 addRoomToStack(Stack, seats(RoomName, StudentsNumber), StackOut) :-
 	room(RoomNumber, StudentsNumber),
 	StdNbr #= StudentsNumber,
@@ -432,9 +437,16 @@ classConstraintes([ClassNumber|ClassNumbers], [class(ClassName, ClassNumber, Tea
 	NumberStudents #< SizeRoom,
 	classConstraintes(ClassNumbers, ClassesList, TimeTable, Variables).
 
+%% scheduleClassComparison(Class, ClassList)
+%
+% scheduleClassComparison/2 Compare one given class to the other classes in order to prevent classes in the same room at the same moment
+%
+% @param Class The Class that is going to be compare to the other classes in the list
+% @param ClassList The Class list that is going to be compared with
+%
 scheduleClassComparison(_, []).
-scheduleClassComparison(class(_, _, _, _, Day1, Hour1, _), [class(_, _, _, _, Day2, Hour2, _)|Tail]):-
-	( Day1 #= Day2 #==> Hour1 #\= Hour2 ),
+scheduleClassComparison(class(_, _, _, Room1, Day1, Hour1, _), [class(_, _, _, Room2, Day2, Hour2, _)|Tail]):-
+	( Day1 #= Day2 #==> Hour1 #= Hour2 #==> Room1 #\= Room2),
 	scheduleClassComparison(class(_, _, _, _, Day1, Hour1, _), Tail).
 
 % --
@@ -467,20 +479,128 @@ parse(Line, StackIn, StackOut) :-
 %
 % @param Text The input text, in the format of [jones, teaches, something, fullstop, ...]
 % @param StackOut, The list of sentences created by the predicate
+%
 parseText(Text, StackOut) :-
   emptyStack(Stack),
   splitFullstop(Text, ListSentences),
   foldl(parse, ListSentences, Stack, StackOut).
 
 
-% ----- FINAL PREDICATE -----
-% Just utiliser ([ffc] variables), all_different pour variables qui doivent être différentes
+% --
+% -- PRINTING
+% --
+
+print_timetable(TimeTable) :-
+	writeln("\n----- Start of TimeTable -----\n"),
+
+	writeln("----- Rooms -----"),
+	buildRoomList(TimeTable, RoomList),
+	printRooms(RoomList),
+
+	writeln("----- Teacher -----"),
+	buildTeacherList(TimeTable, TeacherList),
+	printTeachers(TeacherList),
+
+	writeln("----- Classes -----"),
+	buildClassList(TimeTable, ClassList),
+	%sort(5, @=<, ClassList, SortedClasses),
+	
+	sortByDay(1, ClassList, Mondays),
+	sortByDay(2, ClassList, Tuesdays),
+	sortByDay(3, ClassList, Wednesdays),
+	sortByDay(4, ClassList, Thursdays),
+	sortByDay(5, ClassList, Fridays),
+
+	sort(6, @=<, Mondays, SortedMondays),
+	sort(6, @=<, Tuesdays, SortedTuesdays),
+	sort(6, @=<, Wednesdays, SortedWednesdays),
+	sort(6, @=<, Thursdays, SortedThursdays),
+	sort(6, @=<, Fridays, SortedFridays),
+
+	writeln("Monday : "),
+	printClasses(SortedMondays),
+	writeln("Tuesday : "),
+	printClasses(SortedTuesdays),
+	writeln("Wednesday : "),
+	printClasses(SortedWednesdays),
+	writeln("Thursday : "),
+	printClasses(SortedThursdays),
+	writeln("Friday : "),
+	printClasses(SortedFridays),
+
+
+	writeln("\n----- END OF TIMETABLE -----\n").
+
+printRooms([]).
+printRooms([room(RoomName, RoomNumber, RoomSize)|TimeTable]) :-
+	write("Room "),
+	write_term(RoomName, []),
+	write(" with "),
+	write_term(RoomSize, []),
+	write(" seats"),
+  	writeln(""),
+	printRooms(TimeTable).
+
+printTeachers([]).
+printTeachers([teacher(TeacherName, TeacherNbr, ClassList)|TimeTable]) :-
+	write("Teacher "),
+	write_term(TeacherName, []),
+	write(" teaches the class(es) : "),
+	printClassesT(ClassList),
+	writeln(""),
+	printTeachers(TimeTable).
+
+printClassesT([]).
+printClassesT([Class|Classes]) :-
+	write_term(Class, []),
+	write(" "),
+	printClassesT(Classes).
+
+printClasses([]).
+printClasses([class(ClassName, ClassNumber, Teachby, Room, Day, Hour, NumberStudents)|TimeTable]) :-
+	write("Class "),
+	write_term(ClassName, []),
+	write(" teaches by "), % name of teacher
+	write_term(Teachby, []),
+	write(" in room "),
+	write_term(Room, []),
+	printDay(Day, Hour),
+	writeln(""),
+	printClasses(TimeTable).
+
+sortByDay(_, [], []).
+sortByDay(Day, [Class|ClassList], [Class|DayClasses]) :-
+	Class = class(_,_,_,_,Day,_,_),
+	sortByDay(Day, ClassList, DayClasses).
+sortByDay(Day, [Class|ClassList], DayClasses) :-
+	\+ Class = class(_,_,_,_,Day,_,_),
+	sortByDay(Day, ClassList, DayClasses).
+
+printDay(1, Hour) :-
+	write(" given on Monday"),
+	printInfosClass(Hour).
+printDay(2, Hour) :-
+	write(" given on Tuesday"),
+	printInfosClass(Hour).
+printDay(3, Hour) :-
+	write(" given on Wednesday"),
+	printInfosClass(Hour).
+printDay(4, Hour) :-
+	write(" given on Thursday"),
+	printInfosClass(Hour).
+printDay(5, Hour) :-
+	write(" given on Friday"),
+	printInfosClass(Hour).
+
+printInfosClass(Hour) :-
+	Slot is 8 + Hour,
+	write(" at "),
+	write_term(Slot, []),
+	write(":00").
+
+
 
 % ----- CONSTANT VALUES -----
-% 10 teacher --> list lenght(ListTeacher, 10)
-
-% réduis le nombre pour tests
-
 %Should block here
 teacher(1).
 teacher(2).
@@ -506,24 +626,21 @@ class(5, 10).
 test([prof, steve, teaches, classes, c1, fullstop,
  prof, rob, teaches, classes, c2, fullstop,
  prof, junior, teaches, classes, c3, fullstop,
+ he, also, teaches, class, c4, fullstop,
  class, c1, has, 30, students, fullstop,
  class, c2, has, 35, students, fullstop,
  class, c1, is, before, class, c2, fullstop,
- classes, c1, and, c2, are, on, the, same, day, fullstop,
+ %classes, c1, and, c2, are, on, the, same, day, fullstop,
+ classes, c1, and, c2, are, in, the, same, room, fullstop,
  %classes, c1, and, c2, have, the, same, teacher, fullstop,
  room, 102, seats, 100, students, fullstop,
  room, 202, seats, 35, students, fullstop ]).
 
 %bug for same room, add doublons
-%bug for same teacher, infinite loop
 
-%timetable(Data) :-
-%	length(TeacherList, 10),
-%
-%	teacher(...),
-%	class(...),
-%	room(...)
-%
+%bug for same teacher, return false
+%Teacher teaches class, should add the class in not found
+%Class comparison, not teacher at same time
 
  
 % --
@@ -560,15 +677,6 @@ test(stackRoom) :-
 	emptyStack(Stack),
 	%phrase(roomSentence(Stack, [seats(102, 100)]), [room, 102, seats, 100, students]).
 	phrase(roomSentence(Stack, [room(102, 3, 100)]), [room, 102, seats, 100, students]).
-
-% test(stackClass) :-
-% 	emptyStack(Stack),
-% 	phrase(classSentence(Stack, [sameRoom([c1,c2,c3])]), [classes, c1, c2, and, c3, are, in, the, same, room]),
-% 	phrase(classSentence(Stack, [sameTeacher([c1,c2])]), [classes, c1, and, c2, have, the, same, teacher]),
-% 	phrase(classSentence(Stack, [sameDay([c1,c2])]), [classes, c1, and, c2, are, on, the, same, day]),
-% 	phrase(classSentence(Stack, [classRoom([c1], 102)]), [class, c1, is, in, room, 102]),
-% 	phrase(classSentence([class(c1, _, _, _, _, _, _)], [class(c1, 1, _, _, _, _, 30)]), [class, c1, has, 30, students]),
-% 	phrase(classSentence(Stack, [classAfter([c1], [c2])]), [class, c1, is, after, class, c2]).
 
  test(stackClass) :-
 	emptyStack(Stack),
