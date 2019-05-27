@@ -189,36 +189,36 @@ addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOu
 	\+ member(class(ClassNameAfter, _, _, _, _, _, _), Stack),
 	%class(ClassNumberBefore, StudentsNumberBefore), %TODO maybe at the end to unify with studenNumber
 	%class(ClassNumberAfter, StudentsNumberAfter),
-	DayBefore in 1..5,
-	DayAfter in 1..5,
-	HourBefore in 1..5, 
-	HourAfter in 1..5,
+	%DayBefore in 1..5,
+	%DayAfter in 1..5,
+	%HourBefore in 1..5, 
+	%HourAfter in 1..5,
 	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ),
 	StackOut = [class(ClassNameBefore, ClassNumberBefore, TeachbyBefore, RoomBefore, DayBefore, HourBefore, StudentsNumberBefore), class(ClassNameAfter, ClassNumberAfter, TeachbyAfter, RoomAfter, DayAfter, HourAfter, StudentsNumberAfter) | Stack].
 % C1 is in Stack -> Push C2
 addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOut) :-
 	member(class(ClassNameBefore, _, _, _, DayBefore, HourBefore, _), Stack),
 	\+ member(class(ClassNameAfter, _, _, _, _, _, _), Stack),
-	DayAfter in 1..5,
-	HourAfter in 1..5,
+	%DayAfter in 1..5,
+	%HourAfter in 1..5,
 	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ),
 	StackOut = [class(ClassNameAfter, ClassNumberAfter, TeachbyAfter, RoomAfter, DayAfter, HourAfter, StudentsNumberAfter) | Stack].
 % C2 is in Stack -> Push C1
 addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOut) :-
-	\+ member(class(ClassNameBefore, _, _, _, DayBefore, HourBefore, _), Stack),
-	member(class(ClassNameAfter, _, _, _, _, _, _), Stack),
-	DayBefore in 1..5,
-	HourBefore in 1..5,
+	\+ member(class(ClassNameBefore, _, _, _, _, _, _), Stack),
+	member(class(ClassNameAfter, _, _, _, DayAfter, HourAfter, _), Stack),
+	%DayBefore in 1..5,
+	%HourBefore in 1..5,
 	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ),
 	StackOut = [class(ClassNameBefore, ClassNumberBefore, TeachbyBefore, RoomBefore, DayBefore, HourBefore, StudentsNumberBefore) | Stack].
 % Both classes are already in stack, just adding constraintes
-addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOut) :-
+addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), Stack) :-
 	member(class(ClassNameBefore, _, _, _, DayBefore, HourBefore, _), Stack),
 	member(class(ClassNameAfter, _, _, _, DayAfter, HourAfter, _), Stack),
-	DayBefore in 1..5,
-	DayAfter in 1..5,
-	HourBefore in 1..5, 
-	HourAfter in 1..5,
+	%DayBefore in 1..5,
+	%DayAfter in 1..5,
+	%HourBefore in 1..5, 
+	%HourAfter in 1..5,
 	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ).
 
 % Constraintes on student number
@@ -359,7 +359,13 @@ timeTable(Data, TimeTable) :-
 	length(RoomNumber, 2),
 	all_different(RoomNumber),
 	buildRoomList(TimeTable, RoomsList),
-	roomConstraintes(RoomNumber, RoomsList, TimeTable).
+	roomConstraintes(RoomNumber, RoomsList, TimeTable),
+
+	% Classes
+	length(ClassNumber, 2),
+	all_different(ClassNumber),
+	buildClassList(TimeTable, ClassesList),
+	classConstraintes(ClassNumber, ClassesList, TimeTable).
 
 buildTeacherList([], []).
 buildTeacherList([Teacher|Stack], [teacher(TeacherName, TeacherNumber, ClassList)|TeachersList]) :-
@@ -397,6 +403,20 @@ roomConstraintes([RoomNumber|RoomsNumbers], [room(RoomName, RoomNumber, Students
 	room(RoomNumber, Students),
 	roomConstraintes(RoomsNumbers, RoomsList, TimeTable).
 
+buildClassList([], []).
+buildClassList([Class|Stack], [Class|ClassesList]) :-
+	Class = class(_, _, _, _, _, _, _),
+	buildClassList(Stack, ClassesList).
+buildClassList([Elem|Stack], ClassesList) :-
+	\+ Elem = class(_,_,_,_,_,_,_), 
+	buildClassList(Stack, ClassesList). 
+
+classConstraintes([], [], _).
+classConstraintes([ClassNumber|ClassNumbers], [class(ClassName, ClassNumber, Teachby, Room, Day, Hour, NumberStudents)|ClassesList], TimeTable) :-
+	class(ClassNumber, NumberStudents),
+	Day in 1..5,
+	Hour in 1..5,
+	classConstraintes(ClassNumbers, ClassesList, TimeTable).
 
 % --
 % -- PARSING
@@ -460,9 +480,23 @@ room(3, 100).
 
 class(1, 30).
 class(2, 35).
-class(3, 40).
-class(4, 50).
-class(5, 10).
+%class(3, 40).
+%class(4, 50).
+%class(5, 10).
+
+test([prof, steve, teaches, classes, c1, fullstop,
+ prof, rob, teaches, classes, c2, fullstop,
+ prof, junior, teaches, classes, c3, fullstop,
+ class, c1, has, 30, students, fullstop,
+ class, c2, has, 35, students, fullstop,
+ class, c1, is, before, class, c2, fullstop,
+ classes, c1, and, c2, are, on, the, same, day, fullstop,
+ %classes, c1, and, c2, have, the, same, teacher, fullstop,
+ room, 102, seats, 100, students, fullstop,
+ room, 202, seats, 35, students, fullstop ]).
+
+%bug for same room, add doublons
+%bug for same teacher, infinite loop
 
 %timetable(Data) :-
 %	length(TeacherList, 10),
@@ -540,6 +574,5 @@ test(line) :-
 
 %[room, 102, seats, 100, students, fullstop, prof, steve, teaches, classes, c1, and, c2, fullstop, class, c1, has, 30, students, fullstop, classes, c1, and, c2, are, in, the, same, room, fullstop].
 %[prof, steve, teaches, classes, c1, fullstop, prof, rob, teaches, classes, c2, fullstop, prof, junior, teaches, classes, c3, fullstop ]
-
 
 
