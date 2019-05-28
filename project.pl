@@ -365,7 +365,7 @@ timeTable(Data, TimeTable) :-
 	parseText(Data, TimeTable),
 
 	% Teachers
-	length(TeacherNumber, 3),
+	length(TeacherNumber, 4),
 	all_different(TeacherNumber),
 	buildTeacherList(TimeTable, TeachersList),
 	teacherConstraintes(TeacherNumber, TeachersList, TimeTable),
@@ -377,7 +377,7 @@ timeTable(Data, TimeTable) :-
 	roomConstraintes(RoomNumber, RoomsList, TimeTable),
 
 	% Classes
-	length(ClassNumber, 3),
+	length(ClassNumber, 5),
 	all_different(ClassNumber),
 	buildClassList(TimeTable, ClassesList),
 	classConstraintes(ClassNumber, ClassesList, TimeTable, Variables),
@@ -434,7 +434,8 @@ classConstraintes([ClassNumber|ClassNumbers], [class(ClassName, ClassNumber, Tea
 	Hour in 1..5,
 	scheduleClassComparison(class(ClassName, ClassNumber, Teachby, Room, Day, Hour, NumberStudents), ClassesList),
 	member(room(_,Room, SizeRoom), TimeTable),
-	NumberStudents #< SizeRoom,
+	%room(Room, SizeRoom),
+	NumberStudents #=< SizeRoom,
 	classConstraintes(ClassNumbers, ClassesList, TimeTable, Variables).
 
 %% scheduleClassComparison(Class, ClassList)
@@ -445,12 +446,19 @@ classConstraintes([ClassNumber|ClassNumbers], [class(ClassName, ClassNumber, Tea
 % @param ClassList The Class list that is going to be compared with
 %
 scheduleClassComparison(_, []).
-scheduleClassComparison(class(_, _, _, Room1, Day1, Hour1, _), [class(_, _, _, Room2, Day2, Hour2, _)|Tail]):-
-	( Day1 #= Day2 #==> Hour1 #= Hour2 #==> Room1 #\= Room2),
+scheduleClassComparison(class(_, _, Teach1, Room1, Day1, Hour1, _), [class(_, _, Teach2, Room2, Day2, Hour2, _)|Tail]):-
+	%( Day1 #= Day2 #==> Hour1 #= Hour2 #==> Room1 #\= Room2),
+	%( Hour1 #= Hour2 #==> Room1 #\= Room2 ),
+	%Room1 #\= Room2,
+	%((Day1 #= Day2 #/\ Hour1 #= Hour2) #==> Room1 #\= Room2),
+	(Room1 #= Room2) #==> (Hour1 #\= Hour2),
+	(Room1 #= Room2) #==> (Day1 #\= Day2),
+	%(Room1 #= Room2 #<==> Hour1 #\= Hour2) #\/ (Room1 #= Room2 #<==> Day1 #\= Day2),
+	%(Day1 #= Day2 #==> Room1 #\= Room2),
 	scheduleClassComparison(class(_, _, _, _, Day1, Hour1, _), Tail).
 
 % --
-% -- PARSING
+% -- PARSING 
 % --
 
 %% splitFullstop(In, Out)
@@ -518,15 +526,15 @@ print_timetable(TimeTable) :-
 	sort(6, @=<, Fridays, SortedFridays),
 
 	writeln("Monday : "),
-	printClasses(SortedMondays),
+	printClasses(SortedMondays, TimeTable),
 	writeln("Tuesday : "),
-	printClasses(SortedTuesdays),
+	printClasses(SortedTuesdays, TimeTable),
 	writeln("Wednesday : "),
-	printClasses(SortedWednesdays),
+	printClasses(SortedWednesdays, TimeTable),
 	writeln("Thursday : "),
-	printClasses(SortedThursdays),
+	printClasses(SortedThursdays, TimeTable),
 	writeln("Friday : "),
-	printClasses(SortedFridays),
+	printClasses(SortedFridays, TimeTable),
 
 
 	writeln("\n----- END OF TIMETABLE -----\n").
@@ -556,17 +564,22 @@ printClassesT([Class|Classes]) :-
 	write(" "),
 	printClassesT(Classes).
 
-printClasses([]).
-printClasses([class(ClassName, ClassNumber, Teachby, Room, Day, Hour, NumberStudents)|TimeTable]) :-
+printClasses([], Stack).
+printClasses([class(ClassName, ClassNumber, Teachby, Room, Day, Hour, NumberStudents)|TimeTable], Stack) :-
 	write("Class "),
 	write_term(ClassName, []),
 	write(" teaches by "), % name of teacher
-	write_term(Teachby, []),
+	member(teacher(NameTeacher, Teachby,_), Stack),
+	write_term(NameTeacher, []),
 	write(" in room "),
-	write_term(Room, []),
+	member(room(NameRoom, Room, _), Stack),
+	write_term(NameRoom, []),
 	printDay(Day, Hour),
+	write(" with "),
+	write_term(NumberStudents,[]),
+	write(" students"),
 	writeln(""),
-	printClasses(TimeTable).
+	printClasses(TimeTable, Stack).
 
 sortByDay(_, [], []).
 sortByDay(Day, [Class|ClassList], [Class|DayClasses]) :-
@@ -627,12 +640,14 @@ test([prof, steve, teaches, classes, c1, fullstop,
  prof, rob, teaches, classes, c2, fullstop,
  prof, junior, teaches, classes, c3, fullstop,
  he, also, teaches, class, c4, fullstop,
+ prof, bobby, teaches, class, c5, fullstop,
  class, c1, has, 30, students, fullstop,
  class, c2, has, 35, students, fullstop,
  class, c3, has, 50, students, fullstop,
  class, c1, is, before, class, c3, fullstop,
- %classes, c1, and, c2, are, on, the, same, day, fullstop,
- classes, c1, and, c2, are, in, the, same, room, fullstop,
+ class, c5, is, before, class, c4, fullstop,
+ classes, c1, and, c4, are, on, the, same, day, fullstop,
+ classes, c2, and, c5, are, in, the, same, room, fullstop,
  %classes, c1, and, c2, have, the, same, teacher, fullstop,
  room, 102, seats, 100, students, fullstop,
  room, 202, seats, 35, students, fullstop,
@@ -701,7 +716,9 @@ test(line) :-
 	phrase(line(Stack, [room(102, 3, 100)]), [room, 102, seats, 100, students]).
 
 
-%[room, 102, seats, 100, students, fullstop, prof, steve, teaches, classes, c1, and, c2, fullstop, class, c1, has, 30, students, fullstop, classes, c1, and, c2, are, in, the, same, room, fullstop].
-%[prof, steve, teaches, classes, c1, fullstop, prof, rob, teaches, classes, c2, fullstop, prof, junior, teaches, classes, c3, fullstop ]
+% --
+% -- ANALYSE & COMMENTS
+% --
+
 
 
