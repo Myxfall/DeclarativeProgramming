@@ -177,7 +177,19 @@ addToStack(Stack, Representation, StackOut) :-
 %
 addTeacherToStack(Stack, teacher(TeacherName, ClassList), StackOut) :-
 	%teacher(TeacherNumber),
-	StackOut = [teacher(TeacherName, TeacherNumber, ClassList)|Stack].
+	addClassFromTeacher(ClassList, NewClasses, Stack),
+	append(NewClasses, Stack, StackTMP),
+	StackOut = [teacher(TeacherName, TeacherNumber, ClassList)|StackTMP].
+
+addClassFromTeacher([], [], Stack).
+addClassFromTeacher([Class|ClassList], Classes, Stack) :-
+	member(class(Class,_,_,_,_,_,_), Stack),
+	addClassFromTeacher(ClassList, Classes, Stack).
+addClassFromTeacher([Class|ClassList], [NewClass|Classes], Stack) :-
+	\+ member(class(Class,_,_,_,_,_,_), Stack),
+	NewClass = class(Class,_,_,_,_,_,_),
+	addClassFromTeacher(ClassList, Classes, Stack).
+
 
 %% addClassToStack(Stack, Representation, StackOut)
 %
@@ -361,6 +373,8 @@ updateStack([teacher(TeacherName, TeacherNumber, ClassList)|Stack], NewClass, [t
 % -- FINAL CONSTRAINTES
 % --
 
+%test2(D), splitFullstop(D, Out), foldl(parse, Out, [], Out2), buildTeacherList(Out2, Teachers), buildClassList(Out2, Classes), buildRoomList(Out2, Rooms), length(T, 3), teacherConstraintes(T, Teachers, Out3), all_different(T).
+
 timeTable(Data, TimeTable) :-
 	parseText(Data, TimeTable),
 
@@ -371,13 +385,13 @@ timeTable(Data, TimeTable) :-
 	teacherConstraintes(TeacherNumber, TeachersList, TimeTable),
 
 	% Rooms
-	length(RoomNumber, 2),
+	length(RoomNumber, 3),
 	all_different(RoomNumber),
 	buildRoomList(TimeTable, RoomsList),
 	roomConstraintes(RoomNumber, RoomsList, TimeTable),
 
 	% Classes
-	length(ClassNumber, 2),
+	length(ClassNumber, 3),
 	all_different(ClassNumber),
 	buildClassList(TimeTable, ClassesList),
 	classConstraintes(ClassNumber, ClassesList, TimeTable, Variables),
@@ -623,23 +637,36 @@ class(3, 40).
 class(4, 50).
 class(5, 10).
 
-test([prof, steve, teaches, classes, c1, fullstop,
- prof, rob, teaches, classes, c2, fullstop,
- prof, junior, teaches, classes, c3, fullstop,
- he, also, teaches, class, c4, fullstop,
+test([prof, steve, teaches, class, c1, fullstop,
+ prof, rob, teaches, class, c2, fullstop,
+ prof, junior, teaches, class, c3, fullstop,
+ %he, also, teaches, class, c4, fullstop,
  class, c1, has, 30, students, fullstop,
  class, c2, has, 35, students, fullstop,
  class, c1, is, before, class, c2, fullstop,
  %classes, c1, and, c2, are, on, the, same, day, fullstop,
- classes, c1, and, c2, are, in, the, same, room, fullstop,
+ %classes, c1, and, c2, are, in, the, same, room, fullstop,
  %classes, c1, and, c2, have, the, same, teacher, fullstop,
  room, 102, seats, 100, students, fullstop,
  room, 202, seats, 35, students, fullstop ]).
 
+% 3 Teachers, 2 Room, 3 Classes
+test2([prof, steve, teaches, class, c1, fullstop,
+ prof, rob, teaches, class, c2, fullstop,
+ prof, junior, teaches, class, c3, fullstop,
+ %classes, c3, and, c2, are, in, the, same, room, fullstop,
+ %classes, c1, and, c3, are, on, the, same, day, fullstop,
+ class, c1, is, before, class, c3, fullstop,
+ class, c1, is, in, room, 102, fullstop,
+ room, 102, seats, 60, students, fullstop,
+ room, 202, seats, 35, students, fullstop,
+ room, 302, seats, 100, students, fullstop]).
+
+
 %bug for same room, add doublons
 
 %bug for same teacher, return false
-%Teacher teaches class, should add the class in not found
+%Also teach should also add missing class into stack
 %Class comparison, not teacher at same time
 
  
@@ -669,8 +696,8 @@ test(room) :-
 
 test(stackTeacher) :- 
 	emptyStack(Stack),
-	phrase(teacherSentence(Stack,[teacher(rob, _, [c1])]), [prof, rob, teaches, class, c1]),	
-	phrase(teacherSentence(Stack,[teacher(steve, _, [c1,c2])]), [prof, steve, teaches, classes, c1, and, c2]),
+	phrase(teacherSentence(Stack,[teacher(rob, _, [c1]), class(c1,_,_,_,_,_,_)]), [prof, rob, teaches, class, c1]),
+	phrase(teacherSentence(Stack,[teacher(steve, _, [c1,c2]), class(c1,_,_,_,_,_,_), class(c2,_,_,_,_,_,_)]), [prof, steve, teaches, classes, c1, and, c2]),
 	phrase(teacherSentence([teacher(steve, _, [c1,c2])], [teacher(steve, _, [c1,c2,c3])]), [he, also, teaches, class, c3]).
 
 test(stackRoom) :-
@@ -694,7 +721,7 @@ test(stackRoom) :-
 
 test(line) :-
 	emptyStack(Stack),
-	phrase(line(Stack,[teacher(steve, _, [c1,c2])]), [prof, steve, teaches, classes, c1, and, c2]),
+	%phrase(line(Stack,[teacher(steve, _, [c1,c2])]), [prof, steve, teaches, classes, c1, and, c2]),
 	phrase(line(Stack, [class(c1, _,_,_,_,_,_), class(c2, _,_,_,_,_,_)]), [class, c1, is, before, class, c2]),
 	phrase(line(Stack, [room(102, 3, 100)]), [room, 102, seats, 100, students]).
 
