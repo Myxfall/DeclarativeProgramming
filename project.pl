@@ -371,13 +371,13 @@ timeTable(Data, TimeTable) :-
 	teacherConstraintes(TeacherNumber, TeachersList, TimeTable),
 
 	% Rooms
-	length(RoomNumber, 2),
+	length(RoomNumber, 3),
 	all_different(RoomNumber),
 	buildRoomList(TimeTable, RoomsList),
 	roomConstraintes(RoomNumber, RoomsList, TimeTable),
 
 	% Classes
-	length(ClassNumber, 2),
+	length(ClassNumber, 3),
 	all_different(ClassNumber),
 	buildClassList(TimeTable, ClassesList),
 	classConstraintes(ClassNumber, ClassesList, TimeTable, Variables),
@@ -629,12 +629,14 @@ test([prof, steve, teaches, classes, c1, fullstop,
  he, also, teaches, class, c4, fullstop,
  class, c1, has, 30, students, fullstop,
  class, c2, has, 35, students, fullstop,
- class, c1, is, before, class, c2, fullstop,
+ class, c3, has, 50, students, fullstop,
+ class, c1, is, before, class, c3, fullstop,
  %classes, c1, and, c2, are, on, the, same, day, fullstop,
  classes, c1, and, c2, are, in, the, same, room, fullstop,
  %classes, c1, and, c2, have, the, same, teacher, fullstop,
  room, 102, seats, 100, students, fullstop,
- room, 202, seats, 35, students, fullstop ]).
+ room, 202, seats, 35, students, fullstop,
+ room, 303, seats, 60, students, fullstop ]).
 
 %bug for same room, add doublons
 
