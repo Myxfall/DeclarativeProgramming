@@ -2,83 +2,12 @@
 
 :- use_module(library(clpfd)).
 
-%% ------ TODO LIST -----
-% X) 	: generate goal --> teacher(jones, [a1,b2,c3])
-% X) 	: find way to find fitting goal -> teacher(...) class(...)
-% X) 	: find way to check "he also" after prof X 
-% X) 	: to do that, updateTeacher(...) that find teacher and adds the courses after finding "he also"
-% X)	: just pop() stack and get the goal teacher(...), if not teacher throw error
-
-% 3) 	: pour creer containtes : listes de class/room/teacher and put inside the elements
-% 4) 	: he/she should accept more than just one new class
-% 5)	: parser that works with sentences plain text
-% 6)	: goals should have input/output for system constaintes, find what kind
-% 7) 	: create a new stack that contains the variables name ?
-% 8) 	: when pushed, you check in STACK if already exists
-% -----
-
-% { class(NAME, DAY, HOUR, TEACHER, SEATS) Class(NAM2)}
-% predicate :- class C1 is before class c2
-% 	class(NAME, DAY, HOUR, TEACHER, SEATS)
-% 	CLASS #< CLASS2
-% 	CLass(NAME, SEATS)
-
-% 	push CLASS, CLASS2   
-
-% 	PUSH 
-
-%% ------ QUESTIONS LIST ------
-% 1) Split class sentence in order to push to stack the right goal ?
-% -> yes
-% 2) there is no information about class duration, how are we suppose to give 2 hours of prepration time to teacher then ?
-% ->
-% 3) Teacher should teach each class every week, I suppose we re talking about HIS classes and not all.
-% ->
-% 4) est ce que je peux créer les contraintes au fur et a mesure et non pas a lafin. du genre quand je push isbefore() je crée mes contraintes la et je push dans le stack le full clas(*,*,...) directement
-% ->
-% 5) comment attribuer un numéro à class/teacher qui fit ceux qui existe mais sans essayer dautre numéro
-
-% --- VENDREDI 24 ---
-% 6) pour studentnumber: Nbr = X ou Nbr #= X, Si je sais déjà que ca va être ca, est ce que je dois quand même utiliser #= au cas ou
-% X) crée contraintes au fur et a mesure : essaye dajouter contraintes pendant parsing. Faut il supprimer mon goal de la liste ou je peux modifier la contrainte sans supprimer ?
-% 7.1) ou à la fin en créant une liste de 5 elem C1 C2 C3 C4 C5 et lire la liste de goals et completer tout
-% 8) le parser ne crée pas doffice toutes les classes/room, du coup comment creeer les restantes a la fin? ou ne pas les crer alors ?
-% 9) probleme dassociation name/number, obligé de le faire à la fin.
-% 10) how to block(-,-), does not work
-
-%% ------ DRAFT IDEAS -----
-
-% maybe possible de créer directe des contraintes comme before(c1, c2) -> c1 #< c2
-% ou le faire après au cas par cas
-% return of everything is a triple list with teacher class room that it is possible to print
-
-% -- Contraintes --
-% list of teacher associated with number and class - 1 list of constaintes
-% list of room associated with seats - 2 list of constraintes
-% list of classes
-% then go throught the list and creates constaintes, as the box example
-
-% ?les contraintes doivent être construites au fur et à mesure. A la fin on récupère une liste quil suffit de print
-
-% teach : teacher(prof, [courses])
-% class : classIn([classes], room)
-% class : teacherBy([classes], prof)
-% class : populate(class, nbr_students)
-% class : before(class1, class2)
-% class : after(class1, class2)
-% class : sameDay([classes])
-% room 	: seats(room, nbr_students)
-
-% !!!!! IMPORTANT !!!!!!! Pour les association nombres/name, le faire à la fin, et cest student number qui définit ca.
-% peut être que "VAR in 1..10" doit être à la fin pour chaque classes
-
 % --
-% -- MAIN PROGRAM
+% -- DCG
 % --
 
 % Teacher
 prof --> [prof].
-%teacherName(Name) --> [Name], {string(Name)}.
 teacherName(Name) --> [Name].
 teacher(Name) --> prof, teacherName(Name).
 teacherSuppl --> [he, also].
@@ -87,12 +16,10 @@ teacherSuppl --> [she, also].
 % Class
 classWord --> [class].
 classWord --> [classes].
-%classNumber(Number) --> [Number], {string(Number)}.
 classNumber(Number) --> [Number].
 class([ClassOne, ClassTwo, ClassThree]) --> classWord, classNumber(ClassOne), classNumber(ClassTwo), conjonction, classNumber(ClassThree).
 class([ClassOne, ClassTwo]) --> classWord, classNumber(ClassOne), conjonction, classNumber(ClassTwo).
 class([Number]) --> classWord, classNumber(Number).
-% TODO: add several classes in a better way
 
 % Room
 roomWord --> [room].
@@ -105,31 +32,16 @@ numberStudents(Number) --> [Number], {integer(Number)}.
 students(Number) --> numberStudents(Number), studentsWord.
 
 % Subjects actions
-% TODO: remove this section
 teacherDescription --> [teaches].
-classDescription --> [is, in].
-classDescription --> [are, in, the, same, room].
-classDescription --> [have, the, same, teacher].
-classDescription --> [has].
-classDescription --> [is, before].
-classDescription --> [is, after].
-classDescription --> [are, on, the, same, day].
 roomDescription --> [seats].
 conjonction --> [and].
 
 % Sentence description
-%teacherSentence(StackIn, StackOut) --> teacher(Name), teacherDescription, class(ClassList), { addTeacherToStack(StackIn, Name, ClassList, StackOut) }.
-%teacherSentence(StackIn, StackOut) --> teacher(Name), teacherDescription, class(ClassList), { addToStack(StackIn, teacher(Name, ClassList), StackOut) }.
 teacherSentence(StackIn, StackOut) --> teacher(Name), teacherDescription, class(ClassList), { addTeacherToStack(StackIn, teacher(Name, ClassList), StackOut) }.
 
 teacherSentence(StackIn, StackOut) --> teacherSuppl, teacherDescription, class([Class]), { updateStack(StackIn, Class, StackOut) }.
 
-%% Class sentence really general
-%classSentence(StackIn, StackOut) --> class(ClassList), classDescription, room(RoomNumber).
-%classSentence(StackIn, StackOut) --> class(ClassList), classDescription.
-%classSentence(StackIn, StackOut) --> class(ClassList), classDescription, class(ClassList2).
-
-%% Breaking down generality since we have to generates specific "Representation" for the constraints
+% Breaking down generality since we have to generates specific "Representation" for the constraints
 classSentence(StackIn, StackOut) --> class(ClassList), [are, in, the, same, room], {addClassToStack(StackIn, sameRoom(ClassList), StackOut) }.
 classSentence(StackIn, StackOut) --> class(ClassList), [have, the, same, teacher], {addClassToStack(StackIn, sameTeacher(ClassList), StackOut) }.
 classSentence(StackIn, StackOut) --> class(ClassList), [are, on, the, same, day], {addClassToStack(StackIn, sameDay(ClassList), StackOut) }.
@@ -138,7 +50,6 @@ classSentence(StackIn, StackOut) --> class(ClassList), [is, before], class(Class
 classSentence(StackIn, StackOut) --> class(ClassList), [is, after], class(ClassList2), {addClassToStack(StackIn, classBefore(ClassList2, ClassList), StackOut) }. % Class after is just the opposite of class Before
 classSentence(StackIn, StackOut) --> class(ClassList), [has], students(StudentsNumber), {addClassToStack(StackIn, classStudents(ClassList, StudentsNumber), StackOut) }.
 
-%roomSentence(StackIn, StackOut) --> room(RoomNumber), roomDescription, students(StudentsNumber), { addToStack(StackIn, seats(RoomName, StudentsNumber), StackOut) }.
 roomSentence(StackIn, StackOut) --> room(RoomName), roomDescription, students(StudentsNumber), { addRoomToStack(StackIn, seats(RoomName, StudentsNumber), StackOut) }.
 
 fullstop --> [fullstop].
@@ -147,6 +58,10 @@ fullstop --> [.].
 line(StackIn, StackOut) --> teacherSentence(StackIn, StackOut).
 line(StackIn, StackOut) --> classSentence(StackIn, StackOut).
 line(StackIn, StackOut) --> roomSentence(StackIn, StackOut).
+
+% --
+% -- Stack Filling
+% --
 
 %% emptyStack(X)
 %
@@ -187,86 +102,58 @@ addTeacherToStack(Stack, teacher(TeacherName, ClassList), StackOut) :-
 % @param goal(X,Y,***) The goal it receives, will add constraintes depending on the goal form
 % @parem StackOut The Stack out with the new representation pushed into
 % @class representation : class(ClassName, ClassNumber, Teachby, Room, Day, Hour, NumberStudents)
+% @constrainte : If Day of two classes are equals, then Hour1 should be smaller than Hour2. If days are not equals then day1 should be smaller. Ensures that the first class is taught before
 %
 addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOut) :-
 	\+ member(class(ClassNameBefore, _, _, _, _, _, _), Stack),
 	\+ member(class(ClassNameAfter, _, _, _, _, _, _), Stack),
-	%class(ClassNumberBefore, StudentsNumberBefore), %TODO maybe at the end to unify with studenNumber
-	%class(ClassNumberAfter, StudentsNumberAfter),
-	%DayBefore in 1..5,
-	%check day&hour different
-	%DayAfter in 1..5,
-	%check day&hour different
-	%HourBefore in 1..5,
-	%check day&hour different 
-	%HourAfter in 1..5,
-	%check day&hour different
 	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ),
 	StackOut = [class(ClassNameBefore, ClassNumberBefore, TeachbyBefore, RoomBefore, DayBefore, HourBefore, StudentsNumberBefore), class(ClassNameAfter, ClassNumberAfter, TeachbyAfter, RoomAfter, DayAfter, HourAfter, StudentsNumberAfter) | Stack].
 % C1 is in Stack -> Push C2
 addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOut) :-
 	member(class(ClassNameBefore, _, _, _, DayBefore, HourBefore, _), Stack),
 	\+ member(class(ClassNameAfter, _, _, _, _, _, _), Stack),
-	%DayAfter in 1..5,
-	%check day&hour different
-	%HourAfter in 1..5,
-	%check day&hour different
 	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ),
 	StackOut = [class(ClassNameAfter, ClassNumberAfter, TeachbyAfter, RoomAfter, DayAfter, HourAfter, StudentsNumberAfter) | Stack].
 % C2 is in Stack -> Push C1
 addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOut) :-
 	\+ member(class(ClassNameBefore, _, _, _, _, _, _), Stack),
 	member(class(ClassNameAfter, _, _, _, DayAfter, HourAfter, _), Stack),
-	%DayBefore in 1..5,
-	%check day&hour different
-	%HourBefore in 1..5,
-	%check day&hour different
 	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ),
 	StackOut = [class(ClassNameBefore, ClassNumberBefore, TeachbyBefore, RoomBefore, DayBefore, HourBefore, StudentsNumberBefore) | Stack].
 % Both classes are already in stack, just adding constraintes
 addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), Stack) :-
 	member(class(ClassNameBefore, _, _, _, DayBefore, HourBefore, _), Stack),
 	member(class(ClassNameAfter, _, _, _, DayAfter, HourAfter, _), Stack),
-	%DayBefore in 1..5,
-	%check day&hour different
-	%DayAfter in 1..5,
-	%check day&hour different
-	%HourBefore in 1..5, 
-	%HourAfter in 1..5,
 	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ).
 
 % Constraintes on student number
 addClassToStack(Stack, classStudents([ClassName], StudentsNumber), StackOut) :-
 	member(class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber), Stack),
-	%class(ClassNumber, Number),
 	StudentsNumber #= Number.
 	%StackOut = [class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber) | ListOut].
 addClassToStack(Stack, classStudents([ClassName], StudentsNumber), StackOut) :-
 	\+ member(class(ClassName, _, _, _, _, _, _), Stack),
-	%class(ClassNumber, StudentsNumber), 
 	StackOut = [class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber) | Stack].
 
 % Constraintes on class room
 addClassToStack(Stack, classRoom([ClassName], RoomNumber), StackOut) :-
 	\+ member(class(ClassName, _, _, Room, _, _, _), Stack),
-	Room #= RoomNumber, % Should be name or associated name of ROOM ?
+	Room #= RoomNumber,
 	StackOut = [class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber) | Stack].
 addClassToStack(Stack, classRoom([ClassName], RoomNumber), StackOut) :-
 	member(class(ClassName, _, _, Room, _, _, _), Stack),
-	Room #= RoomNumber. % Should be name or associated name of ROOM ?
+	Room #= RoomNumber.
 
 % Constraintes on same room classes
 addClassToStack(Stack, sameRoom(ClassList), StackOut) :-
 	goThroughSameRoom(ClassList, NewClasses, [Room1, Room2], Stack),
 	Room1 #= Room2,
-	%StackOut = [NewClasses | Stack].
 	append(NewClasses, Stack, StackOut).
-	%StackOut = [Room1, Room2 | Stack].
 addClassToStack(Stack, sameRoom(ClassList), StackOut) :-
 	goThroughSameRoom(ClassList, NewClasses, [Room1, Room2, Room3], Stack),
 	Room1 #= Room2,
 	Room2 #= Room3,
-	%StackOut = [NewClasses | Stack].
 	append(NewClasses, Stack, StackOut).
 
 % Used to go through a list of Class and add to an accumulateur. This allows me to handle in a better way having several classes
@@ -286,13 +173,11 @@ goThroughSameRoom([ClassName|RestClasses], ClassesOut, [Room|RoomOut], Stack) :-
 addClassToStack(Stack, sameDay(ClassList), StackOut) :-
 	goThroughSameDay(ClassList, NewClasses, [Day1, Day2], Stack),
 	Day1 #= Day2,
-	%StackOut = [NewClasses | Stack].
 	append(NewClasses, Stack, StackOut).
 addClassToStack(Stack, sameDay(ClassList), StackOut) :-
 	goThroughSameDay(ClassList, NewClasses, [Day1, Day2, Day3], Stack),
 	Day1 #= Day2,
 	Day2 #= Day3,
-	%StackOut = [NewClasses | Stack].
 	append(NewClasses, Stack, StackOut).
 		
 goThroughSameDay([], [], [], Stack).
@@ -361,6 +246,13 @@ updateStack([teacher(TeacherName, TeacherNumber, ClassList)|Stack], NewClass, [t
 % -- FINAL CONSTRAINTES
 % --
 
+%% TimeTable(Data, TimeTable)
+%
+% TimeTable/2 Receives a list of sentence and creates representation send to TimeTable
+%
+% @param Data A list of sentences that should be parsed by the application.
+% @param TimeTable The Data we call Stack in our application, filled with the goal representation used for all the constraintes, will be used to print the TimeTable.
+%
 timeTable(Data, TimeTable) :-
 	parseText(Data, TimeTable),
 
@@ -383,6 +275,13 @@ timeTable(Data, TimeTable) :-
 	classConstraintes(ClassNumber, ClassesList, TimeTable, Variables),
 	labeling([ffc], Variables).
 
+%% buildTeacherList(Stack, ListTeacher)
+%
+% buildTeacherList/2 Takes the Stack and return a list with only the Teachers. Make it easier to creates the constraintes later
+%
+% @param Stack The Stack with all the representations
+% @param ListTeacher The returned Teacher list
+%
 buildTeacherList([], []).
 buildTeacherList([Teacher|Stack], [teacher(TeacherName, TeacherNumber, ClassList)|TeachersList]) :-
 	Teacher = teacher(TeacherName, TeacherNumber, ClassList),
@@ -391,12 +290,28 @@ buildTeacherList([Elem|Stack], TeacherList) :-
 	\+ Elem = teacher(_,_,_), 
 	buildTeacherList(Stack, TeacherList). 
 
+%% teacherConstraintes(Teachers, TeachersList, Stack)
+%
+% teacherConstraintes/3 Creates all the last constraintes on teachers and classes. For instance ensure that the Variable teachBy in Classes is equal to the teacher that teaches the class.
+%
+% @param Teachers A list of teacher number, used to ensure the number of teacher
+% @param TeachersList The list of teacher
+% @param Stack The Stack in order to check if classes already exist in the stack
+%
 teacherConstraintes([],[], _).
 teacherConstraintes([Teacher|Teachers], [teacher(TeacherName, Teacher, ClassList)|TeachersList], Stack) :-
 	teacher(Teacher),
 	goThroughTeachBy(ClassList, Teacher, Stack),
 	teacherConstraintes(Teachers, TeachersList, Stack).
 
+%% goThroughTeachBy(ClassList, TeacherNumber, Stack)
+%
+% goThroughTeachBy/3 A teacher can teaches several classes, the function will go through these classes and add constraintes
+%
+% @param ClassList The classes the teacher teaches
+% @param TeacherNumber The associated number to the teacher used for the Class constraintes
+% @param Stack The usual Stack used to check if a class exist in the stack
+%
 goThroughTeachBy([], _, _).
 goThroughTeachBy([Class|ClassList], TeacherNumber, Stack) :-
 	member(class(Class, _,Teacher,_,_,_,_), Stack),
@@ -406,6 +321,13 @@ goThroughTeachBy([Class|ClassList], TeacherNumber, Stack) :-
 	\+ member(class(Class, _,_,_,_,_,_), Stack),
 	goThroughTeachBy(ClassList, TeacherNumber, Stack).
 
+%% buildRoomList(Stack, RoomsList)
+%
+% buildRoomList/2 Takes the Stack and return a list with only the Rooms. Make it easier to creates the constraintes later
+%
+% @param Stack The Stack with all the representations
+% @param RoomsList The returned Room list
+%
 buildRoomList([], []).
 buildRoomList([Room|Rooms], [Room|RoomsList]) :-
 	Room = room(RoomName, RoomNumber, Students),
@@ -414,11 +336,26 @@ buildRoomList([Room|Rooms], RoomsList) :-
 	\+ Room = room(_,_,_), 
 	buildRoomList(Rooms, RoomsList).
 
+%% roomConstraintes(RoomNumber, RoomsList, Stack)
+%
+% roomConstraintes/3 Creates all the last constraintes on rooms. Associate a Room name with a room number, used later for the number of student in a class and only allowing classes size smaller than the room size.
+%
+% @param RoomNumber A list of room number
+% @param RoomsList The list of Rooms
+% @param Stack The Stack
+%
 roomConstraintes([], [], _).
 roomConstraintes([RoomNumber|RoomsNumbers], [room(RoomName, RoomNumber, Students)|RoomsList], TimeTable) :-
 	room(RoomNumber, Students),
 	roomConstraintes(RoomsNumbers, RoomsList, TimeTable).
 
+%% buildClassList(Stack, ClassesList)
+%
+% buildClassList/2 Takes the Stack and return a list with only the Classes. Make it easier to creates the constraintes later
+%
+% @param Stack The Stack with all the representations
+% @param ClassesList The returned Class list
+%
 buildClassList([], []).
 buildClassList([Class|Stack], [Class|ClassesList]) :-
 	Class = class(_, _, _, _, _, _, _),
@@ -427,6 +364,16 @@ buildClassList([Elem|Stack], ClassesList) :-
 	\+ Elem = class(_,_,_,_,_,_,_), 
 	buildClassList(Stack, ClassesList). 
 
+%% classConstraintes(ClassNumber, ClassesList, Stack)
+%
+% classConstraintes/3 Creates all the last constraintes on classes. 
+% Ensure that Day and Hour is within the domain 1..5. 5 days a week, 5 hours slot for a day.
+% Makes the connexion with the room size and ensures the number of students for the class is smaller than the size room.
+%
+% @param ClassNumber A list of room number
+% @param ClassesList The list of Classes
+% @param Stack The Stack
+%
 classConstraintes([], [], _, []).
 classConstraintes([ClassNumber|ClassNumbers], [class(ClassName, ClassNumber, Teachby, Room, Day, Hour, NumberStudents)|ClassesList], TimeTable, [Day, Hour|Variables]) :-
 	class(ClassNumber, NumberStudents),
@@ -434,7 +381,6 @@ classConstraintes([ClassNumber|ClassNumbers], [class(ClassName, ClassNumber, Tea
 	Hour in 1..5,
 	scheduleClassComparison(class(ClassName, ClassNumber, Teachby, Room, Day, Hour, NumberStudents), ClassesList),
 	member(room(_,Room, SizeRoom), TimeTable),
-	%room(Room, SizeRoom),
 	NumberStudents #=< SizeRoom,
 	classConstraintes(ClassNumbers, ClassesList, TimeTable, Variables).
 
@@ -448,13 +394,9 @@ classConstraintes([ClassNumber|ClassNumbers], [class(ClassName, ClassNumber, Tea
 scheduleClassComparison(_, []).
 scheduleClassComparison(class(_, _, Teach1, Room1, Day1, Hour1, _), [class(_, _, Teach2, Room2, Day2, Hour2, _)|Tail]):-
 	%( Day1 #= Day2 #==> Hour1 #= Hour2 #==> Room1 #\= Room2),
-	%( Hour1 #= Hour2 #==> Room1 #\= Room2 ),
-	%Room1 #\= Room2,
 	%((Day1 #= Day2 #/\ Hour1 #= Hour2) #==> Room1 #\= Room2),
 	(Room1 #= Room2) #==> (Hour1 #\= Hour2),
 	(Room1 #= Room2) #==> (Day1 #\= Day2),
-	%(Room1 #= Room2 #<==> Hour1 #\= Hour2) #\/ (Room1 #= Room2 #<==> Day1 #\= Day2),
-	%(Day1 #= Day2 #==> Room1 #\= Room2),
 	scheduleClassComparison(class(_, _, _, _, Day1, Hour1, _), Tail).
 
 % --
@@ -464,6 +406,7 @@ scheduleClassComparison(class(_, _, Teach1, Room1, Day1, Hour1, _), [class(_, _,
 %% splitFullstop(In, Out)
 %
 % splitFullstop/2 Receives a List of sentences and created a list of list of these sentences
+%
 splitFullstop([], []).
 splitFullstop([fullstop|T], [[]|T2]) :-
     splitFullstop(T, T2).
@@ -478,6 +421,7 @@ splitFullstop([H|T], [[H|T2]|T3]) :-
 % @param Line The current line being parsed
 % @param StackIn Current Stack with the goal representations
 % @param StackOut Stack being filled in
+%
 parse(Line, StackIn, StackOut) :-
   phrase(line(StackIn, StackOut), Line).
 
