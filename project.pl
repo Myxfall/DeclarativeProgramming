@@ -584,8 +584,6 @@ class(4, 50).
 class(5, 10).
 
 
-
-
 % --
 % -- ANALYSE & COMMENTS
 % --
@@ -622,13 +620,11 @@ test2([prof, steve, teaches, classes, c1, fullstop,
 	class, c4, is, after, class, c3, fullstop,
 	classes, c1, and, c4, are, on, the, same, day, fullstop]).
 
-%bug for same teacher, return false
-%Teacher teaches class, should add the class in not found
-%Class comparison, not teacher at same time
 
 % ----- TESTS -----
 % There are some premade tests sentence that I used to test the program
-% 
+% IF needed, the user could add more variables, but requirements specifies 10 teachers, 5 classes and 3 rooms
+% The numbers of students in class/room could also be changed, the only thing to do is to change the predicate room or class.
 
 % ----- Analyse the results -----
 % It is quite easy to observe if the results are good or not. 
@@ -637,15 +633,15 @@ test2([prof, steve, teaches, classes, c1, fullstop,
 % The number of students in a class should be smaller than the room size.
 
 % The program presents some bugs. I tried to fix them but I was not able to find the origin of the bug.
-% I know prolog provides debug&trace, but checking the whole program execution is so long and too messy that I was not able to find the origin of the bug.
+% I know prolog provides debug&trace, but checking the whole program execution is so long and too messy that I was not able to find the origin of the bugs.
 % These known bugs are :
 % 	1) Same teacher seems to make the program crash
-% 	2) Class is in room X alsmo seems to crash the program
+% 	2) Class is in room X also seems to crash the program
 %	3) The room are quite bugy. Even with the constraintes, two classes at the same time have the same room. It also does not take in count the first class, and will only try the two others.
 %	4) If you say that a teacher teaches some classes, you HAVE to define something for the classes. If you do not add this specification, the classes will not be added into the stack and will not be displayed. I actually know where is the "bug" tried to fixed it but made my program completely wrong. The problem is from the parsing of teacher, that when it finds a class not present in the stack, it does not add it. Then the class will never exists if you do not add specification on this class. Class specification do add the class into the stack.
  
 % --
-% -- TEST
+% -- UNIT TESTS
 % --
 % class(ClassName, ClassNumber, Teachby, Room, Day, Hour, NumberStudents)
 
