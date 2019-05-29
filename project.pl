@@ -254,21 +254,21 @@ timeTable(Data, TimeTable) :-
 	parseText(Data, TimeTable),
 
 	% Teachers
-	teacherNbr(X), % used for the different tests
+	teacher(X), % used to "try" different number of teacher, in order to make the program succeeds
 	length(TeacherNumber, X),
 	all_different(TeacherNumber),
 	buildTeacherList(TimeTable, TeachersList),
 	teacherConstraintes(TeacherNumber, TeachersList, TimeTable),
 
 	% Rooms
-	roomNbr(Y), % used for the different tests
+	room(Y, _), % used to "try" different number of room, in order to make the program succeeds
 	length(RoomNumber, Y),
 	all_different(RoomNumber),
 	buildRoomList(TimeTable, RoomsList),
 	roomConstraintes(RoomNumber, RoomsList, TimeTable),
 
 	% Classes
-	classNbr(Z), % used for the different tests
+	class(Z,_), % used to "try" different number of class, in order to make the program succeeds
 	length(ClassNumber, Z),
 	all_different(ClassNumber),
 	buildClassList(TimeTable, ClassesList),
@@ -583,10 +583,7 @@ class(3, 40).
 class(4, 50).
 class(5, 10).
 
-% Change these parameters when changing test sentences
-teacherNbr(2).
-roomNbr(3).
-classNbr(4).
+
 
 
 % --
@@ -610,6 +607,7 @@ test([prof, steve, teaches, classes, c1, fullstop,
  room, 202, seats, 35, students, fullstop,
  room, 303, seats, 60, students, fullstop ]).
 
+
 % Teacher 2, Room 3, Class 4
 test2([prof, steve, teaches, classes, c1, fullstop,
 	he, also, teaches, class, c4, fullstop,
@@ -630,8 +628,7 @@ test2([prof, steve, teaches, classes, c1, fullstop,
 
 % ----- TESTS -----
 % There are some premade tests sentence that I used to test the program
-% It is IMPORTANT to note that the user should change the number of class/room/teacher and make it fit to these number from the list of sentences.
-% Ensuring that when using "length(ListSomething,X)" the predicates does not return "false".
+% 
 
 % ----- Analyse the results -----
 % It is quite easy to observe if the results are good or not. 
