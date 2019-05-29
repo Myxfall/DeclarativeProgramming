@@ -154,6 +154,28 @@ addClassToStack(Stack, sameRoom(ClassList), StackOut) :-
 	Room2 #= Room3,
 	append(NewClasses, Stack, StackOut).
 
+% Constraintes on same day classes
+addClassToStack(Stack, sameDay(ClassList), StackOut) :-
+	goThroughSameDay(ClassList, NewClasses, [Day1, Day2], Stack),
+	Day1 #= Day2,
+	append(NewClasses, Stack, StackOut).
+addClassToStack(Stack, sameDay(ClassList), StackOut) :-
+	goThroughSameDay(ClassList, NewClasses, [Day1, Day2, Day3], Stack),
+	Day1 #= Day2,
+	Day2 #= Day3,
+	append(NewClasses, Stack, StackOut).
+
+% Constraintes on same teacher classes
+addClassToStack(Stack, sameTeacher(ClassList), StackOut) :-
+	goThroughSameTeacher(ClassList, NewClasses, [Teacher1, Teacher2], Stack),
+	Teacher1 #= Teacher2,
+	append(NewClasses, Stack, StackOut).
+addClassToStack(Stack, sameTeacher(ClassList), StackOut) :-
+	goThroughSameTeacher(ClassList, NewClasses, [Teacher1, Teacher2, Teacher3], Stack),
+	Teacher1 #= Teacher2,
+	Teacher2 #= Teacher3,
+	append(NewClasses, Stack, StackOut).
+
 % Used to go through a list of Class and add to an accumulateur. This allows me to handle in a better way having several classes
 % and prevent me to create 9 differents predicates, does c1 exists in stack but c2 and c3 not, etc, etc...
 goThroughSameRoom([], [], [], _).
@@ -167,37 +189,16 @@ goThroughSameRoom([ClassName|RestClasses], ClassesOut, [Room|RoomOut], Stack) :-
 	%NewRoom = Room,
 	goThroughSameRoom(RestClasses, ClassesOut, RoomOut, Stack).
 
-% Constraintes on same day classes
-addClassToStack(Stack, sameDay(ClassList), StackOut) :-
-	goThroughSameDay(ClassList, NewClasses, [Day1, Day2], Stack),
-	Day1 #= Day2,
-	append(NewClasses, Stack, StackOut).
-addClassToStack(Stack, sameDay(ClassList), StackOut) :-
-	goThroughSameDay(ClassList, NewClasses, [Day1, Day2, Day3], Stack),
-	Day1 #= Day2,
-	Day2 #= Day3,
-	append(NewClasses, Stack, StackOut).
-		
-goThroughSameDay([], [], [], Stack).
+goThroughSameDay([], [], [], _).
 goThroughSameDay([ClassName|RestClasses], [NewClass|ClassesOut], [NewDay|RoomOut], Stack) :-
 	\+ member(class(ClassName, _, _, _, _, _, _), Stack),
-	NewClass = class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber),
+	NewClass = class(ClassName, _, _, _, Day, _, _),
 	NewDay = Day,
 	goThroughSameDay(RestClasses, ClassesOut, RoomOut, Stack).
 goThroughSameDay([ClassName|RestClasses], ClassesOut, [NewDay|RoomOut], Stack) :-
 	member(class(ClassName, _, _, _, Day, _, _), Stack),
 	NewDay = Day,
 	goThroughSameDay(RestClasses, ClassesOut, RoomOut, Stack).
-
-addClassToStack(Stack, sameTeacher(ClassList), StackOut) :-
-	goThroughSameTeacher(ClassList, NewClasses, [Teacher1, Teacher2], Stack),
-	Teacher1 #= Teacher2,
-	append(NewClasses, Stack, StackOut).
-addClassToStack(Stack, sameTeacher(ClassList), StackOut) :-
-	goThroughSameTeacher(ClassList, NewClasses, [Teacher1, Teacher2, Teacher3], Stack),
-	Teacher1 #= Teacher2,
-	Teacher2 #= Teacher3,
-	append(NewClasses, Stack, StackOut).
 
 goThroughSameTeacher([], [], [], _).
 goThroughSameTeacher([ClassName|RestClasses], [NewClasses|ClassesOut], [Teachby|TeacherOut], Stack) :-
