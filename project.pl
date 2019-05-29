@@ -91,8 +91,7 @@ addToStack(Stack, Representation, StackOut) :-
 % @parem StackOut The Stack out with the new representation pushed into
 %
 addTeacherToStack(Stack, teacher(TeacherName, ClassList), StackOut) :-
-	%teacher(TeacherNumber),
-	StackOut = [teacher(TeacherName, TeacherNumber, ClassList)|Stack].
+	StackOut = [teacher(TeacherName, _, ClassList)|Stack].
 
 %% addClassToStack(Stack, Representation, StackOut)
 %
@@ -108,19 +107,19 @@ addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOu
 	\+ member(class(ClassNameBefore, _, _, _, _, _, _), Stack),
 	\+ member(class(ClassNameAfter, _, _, _, _, _, _), Stack),
 	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ),
-	StackOut = [class(ClassNameBefore, ClassNumberBefore, TeachbyBefore, RoomBefore, DayBefore, HourBefore, StudentsNumberBefore), class(ClassNameAfter, ClassNumberAfter, TeachbyAfter, RoomAfter, DayAfter, HourAfter, StudentsNumberAfter) | Stack].
+	StackOut = [class(ClassNameBefore, _, _, _, DayBefore, HourBefore, _), class(ClassNameAfter, _, _, _, DayAfter, HourAfter, _) | Stack].
 % C1 is in Stack -> Push C2
 addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOut) :-
 	member(class(ClassNameBefore, _, _, _, DayBefore, HourBefore, _), Stack),
 	\+ member(class(ClassNameAfter, _, _, _, _, _, _), Stack),
 	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ),
-	StackOut = [class(ClassNameAfter, ClassNumberAfter, TeachbyAfter, RoomAfter, DayAfter, HourAfter, StudentsNumberAfter) | Stack].
+	StackOut = [class(ClassNameAfter, _, _, _, DayAfter, HourAfter, _) | Stack].
 % C2 is in Stack -> Push C1
 addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), StackOut) :-
 	\+ member(class(ClassNameBefore, _, _, _, _, _, _), Stack),
 	member(class(ClassNameAfter, _, _, _, DayAfter, HourAfter, _), Stack),
 	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ),
-	StackOut = [class(ClassNameBefore, ClassNumberBefore, TeachbyBefore, RoomBefore, DayBefore, HourBefore, StudentsNumberBefore) | Stack].
+	StackOut = [class(ClassNameBefore, _, _, _, DayBefore, HourBefore, _) | Stack].
 % Both classes are already in stack, just adding constraintes
 addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), Stack) :-
 	member(class(ClassNameBefore, _, _, _, DayBefore, HourBefore, _), Stack),
@@ -128,20 +127,19 @@ addClassToStack(Stack, classBefore([ClassNameBefore], [ClassNameAfter]), Stack) 
 	( DayBefore #= DayAfter #==> HourBefore #< HourAfter ) #/\ ( DayBefore #\= DayAfter #==> DayBefore #< DayAfter ).
 
 % Constraintes on student number
-addClassToStack(Stack, classStudents([ClassName], StudentsNumber), StackOut) :-
-	member(class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber), Stack),
+addClassToStack(Stack, classStudents([ClassName], Number), _) :-
+	member(class(ClassName, _, _, _, _, _, StudentsNumber), Stack),
 	StudentsNumber #= Number.
-	%StackOut = [class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber) | ListOut].
 addClassToStack(Stack, classStudents([ClassName], StudentsNumber), StackOut) :-
 	\+ member(class(ClassName, _, _, _, _, _, _), Stack),
-	StackOut = [class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber) | Stack].
+	StackOut = [class(ClassName, _, _, _, _, _, StudentsNumber) | Stack].
 
 % Constraintes on class room
 addClassToStack(Stack, classRoom([ClassName], RoomNumber), StackOut) :-
-	\+ member(class(ClassName, _, _, Room, _, _, _), Stack),
+	\+ member(class(ClassName, _, _, _, _, _, _), Stack),
 	Room #= RoomNumber,
-	StackOut = [class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber) | Stack].
-addClassToStack(Stack, classRoom([ClassName], RoomNumber), StackOut) :-
+	StackOut = [class(ClassName, _, _, Room, _, _, _) | Stack].
+addClassToStack(Stack, classRoom([ClassName], RoomNumber), _) :-
 	member(class(ClassName, _, _, Room, _, _, _), Stack),
 	Room #= RoomNumber.
 
@@ -158,10 +156,10 @@ addClassToStack(Stack, sameRoom(ClassList), StackOut) :-
 
 % Used to go through a list of Class and add to an accumulateur. This allows me to handle in a better way having several classes
 % and prevent me to create 9 differents predicates, does c1 exists in stack but c2 and c3 not, etc, etc...
-goThroughSameRoom([], [], [], Stack).
+goThroughSameRoom([], [], [], _).
 goThroughSameRoom([ClassName|RestClasses], [NewClass|ClassesOut], [NewRoom|RoomOut], Stack) :-
 	\+ member(class(ClassName, _, _, _, _, _, _), Stack),
-	NewClass = class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber),
+	NewClass = class(ClassName, _, _, Room, _, _, _),
 	NewRoom = Room,
 	goThroughSameRoom(RestClasses, ClassesOut, RoomOut, Stack).
 goThroughSameRoom([ClassName|RestClasses], ClassesOut, [Room|RoomOut], Stack) :-
@@ -201,10 +199,10 @@ addClassToStack(Stack, sameTeacher(ClassList), StackOut) :-
 	Teacher2 #= Teacher3,
 	append(NewClasses, Stack, StackOut).
 
-goThroughSameTeacher([], [], [], Stack).
+goThroughSameTeacher([], [], [], _).
 goThroughSameTeacher([ClassName|RestClasses], [NewClasses|ClassesOut], [Teachby|TeacherOut], Stack) :-
 	\+ member(class(ClassName, _, _, _, _, _, _), Stack),
-	NewClasses = class(ClassName, ClassNumber, Teachby, Room, Day, Hour, StudentsNumber),
+	NewClasses = class(ClassName, _, Teachby, _, _, _, _),
 	goThroughSameTeacher(RestClasses, ClassesOut, TeacherOut, Stack).
 goThroughSameTeacher([ClassName|RestClasses], ClassesOut, [Teachby|TeacherOut], Stack) :-
 	member(class(ClassName, _, Teachby, _, _, _, _), Stack),
@@ -229,15 +227,13 @@ addRoomToStack(Stack, seats(RoomName, StudentsNumber), StackOut) :-
 % throws error 	when previous sentence is not teacher
 % 				when class is already in stack of teacher representation
 %
-updateStack([Teacher|Stack], ClassList, StackOut) :- 
+updateStack([Teacher|_], _, _) :- 
 	\+ Teacher = teacher(_,_,_),
 	throw("Error : Previous sentence should be teacher when he/she is used !").
-updateStack([teacher(TeacherName, _, ClassList)|Stack], NewClass, StackOut) :- 
-	Teacher = teacher(_,_,_),
+updateStack([teacher(_, _, ClassList)|_], NewClass, _) :- 
 	member(NewClass, ClassList),
 	throw("Error : he/she teacher new class is already in stack !").
 updateStack([teacher(TeacherName, TeacherNumber, ClassList)|Stack], NewClass, [teacher(TeacherName, TeacherNumber, NewClassList)|Stack]) :- 
-	Teacher = teacher(_,_,_),
 	\+ member(NewClass, ClassList),
 	append(ClassList, [NewClass], NewClassList).
 
@@ -299,7 +295,7 @@ buildTeacherList([Elem|Stack], TeacherList) :-
 % @param Stack The Stack in order to check if classes already exist in the stack
 %
 teacherConstraintes([],[], _).
-teacherConstraintes([Teacher|Teachers], [teacher(TeacherName, Teacher, ClassList)|TeachersList], Stack) :-
+teacherConstraintes([Teacher|Teachers], [teacher(_, Teacher, ClassList)|TeachersList], Stack) :-
 	teacher(Teacher),
 	goThroughTeachBy(ClassList, Teacher, Stack),
 	teacherConstraintes(Teachers, TeachersList, Stack).
@@ -330,7 +326,7 @@ goThroughTeachBy([Class|ClassList], TeacherNumber, Stack) :-
 %
 buildRoomList([], []).
 buildRoomList([Room|Rooms], [Room|RoomsList]) :-
-	Room = room(RoomName, RoomNumber, Students),
+	Room = room(_, _, _),
 	buildRoomList(Rooms, RoomsList).
 buildRoomList([Room|Rooms], RoomsList) :-
 	\+ Room = room(_,_,_), 
@@ -345,7 +341,7 @@ buildRoomList([Room|Rooms], RoomsList) :-
 % @param Stack The Stack
 %
 roomConstraintes([], [], _).
-roomConstraintes([RoomNumber|RoomsNumbers], [room(RoomName, RoomNumber, Students)|RoomsList], TimeTable) :-
+roomConstraintes([RoomNumber|RoomsNumbers], [room(_, RoomNumber, Students)|RoomsList], TimeTable) :-
 	room(RoomNumber, Students),
 	roomConstraintes(RoomsNumbers, RoomsList, TimeTable).
 
@@ -387,6 +383,7 @@ classConstraintes([ClassNumber|ClassNumbers], [class(ClassName, ClassNumber, Tea
 %% scheduleClassComparison(Class, ClassList)
 %
 % scheduleClassComparison/2 Compare one given class to the other classes in order to prevent classes in the same room at the same moment
+% Also ensure that a teacher is not teaching two different classes at the same time
 %
 % @param Class The Class that is going to be compare to the other classes in the list
 % @param ClassList The Class list that is going to be compared with
@@ -397,6 +394,7 @@ scheduleClassComparison(class(_, _, Teach1, Room1, Day1, Hour1, _), [class(_, _,
 	%((Day1 #= Day2 #/\ Hour1 #= Hour2) #==> Room1 #\= Room2),
 	(Room1 #= Room2) #==> (Hour1 #\= Hour2),
 	(Room1 #= Room2) #==> (Day1 #\= Day2),
+	( Day1 #= Day2 #==> Hour1 #= Hour2 #==> Teach1 #\= Teach2),
 	scheduleClassComparison(class(_, _, _, _, Day1, Hour1, _), Tail).
 
 % --
@@ -484,7 +482,7 @@ print_timetable(TimeTable) :-
 	writeln("\n----- END OF TIMETABLE -----\n").
 
 printRooms([]).
-printRooms([room(RoomName, RoomNumber, RoomSize)|TimeTable]) :-
+printRooms([room(RoomName, _, RoomSize)|TimeTable]) :-
 	write("Room "),
 	write_term(RoomName, []),
 	write(" with "),
@@ -494,7 +492,7 @@ printRooms([room(RoomName, RoomNumber, RoomSize)|TimeTable]) :-
 	printRooms(TimeTable).
 
 printTeachers([]).
-printTeachers([teacher(TeacherName, TeacherNbr, ClassList)|TimeTable]) :-
+printTeachers([teacher(TeacherName, _, ClassList)|TimeTable]) :-
 	write("Teacher "),
 	write_term(TeacherName, []),
 	write(" teaches the class(es) : "),
@@ -508,8 +506,8 @@ printClassesT([Class|Classes]) :-
 	write(" "),
 	printClassesT(Classes).
 
-printClasses([], Stack).
-printClasses([class(ClassName, ClassNumber, Teachby, Room, Day, Hour, NumberStudents)|TimeTable], Stack) :-
+printClasses([], _).
+printClasses([class(ClassName, _, Teachby, Room, Day, Hour, NumberStudents)|TimeTable], Stack) :-
 	write("Class "),
 	write_term(ClassName, []),
 	write(" teaches by "), % name of teacher
