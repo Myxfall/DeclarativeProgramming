@@ -1,5 +1,9 @@
 %['/Users/max/Dropbox/Unif/Master/DeclarativeProgramming/SecondYear/Project/DeclarativeProgramming/project.pl'].
 
+% -- Author --
+% Maximilien Romain
+% Declarative programming assignment, 7th June 2019
+
 :- use_module(library(clpfd)).
 
 % --
