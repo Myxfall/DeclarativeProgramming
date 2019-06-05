@@ -614,6 +614,7 @@ test([prof, steve, teaches, classes, c1, fullstop,
  room, 202, seats, 35, students, fullstop,
  room, 303, seats, 60, students, fullstop ]).
 
+% Basics tests
 test1([prof, steve, teaches, classes, c1, fullstop,
  prof, rob, teaches, classes, c2, fullstop,
  class, c1, is, before, class, c2, fullstop,
@@ -672,6 +673,7 @@ test2([prof, steve, teaches, classes, c1, fullstop,
 % Friday : 
 % ----- END OF TIMETABLE -----
 
+% ----- Comments -----
 % The program presents some bugs. I tried to fix them but I was not able to find the origin of the bug.
 % I know prolog provides debug&trace, but checking the whole program execution is so long and too messy that I was not able to find the origin of the bugs.
 % These known bugs are :
