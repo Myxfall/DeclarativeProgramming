@@ -250,7 +250,7 @@ updateStack([teacher(TeacherName, TeacherNumber, ClassList)|Stack], NewClass, [t
 % @param Data A list of sentences that should be parsed by the application.
 % @param TimeTable The Data we call Stack in our application, filled with the goal representation used for all the constraintes, will be used to print the TimeTable.
 %
-timeTable(Data, TimeTable) :-
+timetable(Data, TimeTable) :-
 	parseText(Data, TimeTable),
 
 	% Teachers
@@ -395,10 +395,12 @@ classConstraintes([ClassNumber|ClassNumbers], [class(ClassName, ClassNumber, Tea
 %
 scheduleClassComparison(_, []).
 scheduleClassComparison(class(_, _, Teach1, Room1, Day1, Hour1, _), [class(_, _, Teach2, Room2, Day2, Hour2, _)|Tail]):-
+	% Constraintes that specifies that two classes should be be teached in the same room at the same time
 	%( Day1 #= Day2 #==> Hour1 #= Hour2 #==> Room1 #\= Room2),
 	%((Day1 #= Day2 #/\ Hour1 #= Hour2) #==> Room1 #\= Room2),
 	(Room1 #= Room2) #==> (Hour1 #\= Hour2),
 	(Room1 #= Room2) #==> (Day1 #\= Day2),
+	% Constrainte that specifies that a teacher should not teach two courses at the same time
 	( Day1 #= Day2 #==> Hour1 #= Hour2 #==> Teach1 #\= Teach2),
 	scheduleClassComparison(class(_, _, _, _, Day1, Hour1, _), Tail).
 
@@ -466,6 +468,7 @@ print_timetable(TimeTable) :-
 	sortByDay(4, ClassList, Thursdays),
 	sortByDay(5, ClassList, Fridays),
 
+  	% Sorting classes by hour for each day
 	sort(6, @=<, Mondays, SortedMondays),
 	sort(6, @=<, Tuesdays, SortedTuesdays),
 	sort(6, @=<, Wednesdays, SortedWednesdays),
@@ -588,6 +591,8 @@ class(5, 10).
 % -- ANALYSE & COMMENTS
 % --
 
+% Running example : test(Data), timetable(Data, Time),print_timetable(Time).
+
 % Teacher 4, room 3, class 5
 test([prof, steve, teaches, classes, c1, fullstop,
  prof, rob, teaches, classes, c2, fullstop,
@@ -605,6 +610,11 @@ test([prof, steve, teaches, classes, c1, fullstop,
  room, 202, seats, 35, students, fullstop,
  room, 303, seats, 60, students, fullstop ]).
 
+test1([prof, steve, teaches, classes, c1, fullstop,
+ prof, rob, teaches, classes, c2, fullstop,
+ class, c1, is, before, class, c2, fullstop,
+ room, 101, seats, 100, students, fullstop,
+ room, 201, seats, 35, students, fullstop]).
 
 % Teacher 2, Room 3, Class 4
 test2([prof, steve, teaches, classes, c1, fullstop,
@@ -631,6 +641,32 @@ test2([prof, steve, teaches, classes, c1, fullstop,
 % If two classes are teached by the same teacher at the same time, it is wrong.
 % If two classes are teached at the same time in the same room, it is wrong.
 % The number of students in a class should be smaller than the room size.
+
+% There is the results retrieved with the following command : test(Data), timetable(Data, Time),print_timetable(Time).
+% As explained, the results were analysed by hand (or eyes), meaning that I checked myself if everything was correct. The constraintes are humanly easy to understand, and thus easy to confirm the results.
+
+% ----- Start of TimeTable -----
+% ----- Rooms -----
+% Room 303 with 60 seats
+% Room 202 with 35 seats
+% Room 102 with 100 seats
+% ----- Teacher -----
+% Teacher bobby teaches the class(es) : c5 
+% Teacher junior teaches the class(es) : c3 c4 
+% Teacher rob teaches the class(es) : c2 
+% Teacher steve teaches the class(es) : c1 
+% ----- Classes -----
+% Monday : 
+% Class c5 teaches by bobby in room 303 given on Monday at 9:00 with 40 students
+% Class c1 teaches by steve in room 202 given on Monday at 9:00 with 30 students
+% Class c4 teaches by junior in room 202 given on Monday at 10:00 with 10 students
+% Class c3 teaches by junior in room 303 given on Monday at 11:00 with 50 students
+% Tuesday : 
+% Class c2 teaches by rob in room 303 given on Tuesday at 9:00 with 35 students
+% Wednesday : 
+% Thursday : 
+% Friday : 
+% ----- END OF TIMETABLE -----
 
 % The program presents some bugs. I tried to fix them but I was not able to find the origin of the bug.
 % I know prolog provides debug&trace, but checking the whole program execution is so long and too messy that I was not able to find the origin of the bugs.
